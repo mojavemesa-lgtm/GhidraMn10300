@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- See Relax specification: Ghidra/Framework/SoftwareModeling/data/languages/processor_spec.rxg -->
+
+<processor_spec>
+  <programcounter register="PC" />
+  <!-- <data_space space="ram" />   -->
+
+	<register_data>
+		<register name="PSW" group="FLAGS" />
+	</register_data>
+  
+<!--
+  <default_memory_blocks>
+    <memory_block name="iram"  start_address="0x00000000" length="0x20000000" mode="rwx" initialized="false" />
+    <memory_block name="mmio"  start_address="0x20000000" length="0x20000000" mode="rwv" initialized="false" />
+    <memory_block name="rom"   start_address="0x40000000" length="0x80000000" mode="rwx" initialized="false" />  
+  </default_memory_blocks>
+  -->
+</processor_spec>

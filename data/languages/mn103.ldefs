@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- See Relax specification: Ghidra/Framework/SoftwareModeling/data/languages/language_definitions.rxg -->
+
+<language_definitions>
+<!-- Uncomment the following to make the language available in Ghidra -->
+	<language id="mn10300:LE:32:default" processor="MN10300" endian="little" size="32"
+	          version="0.1" variant="default"
+	          slafile="mn103.sla" processorspec="mn103.pspec" >
+		<description>Matsushita MN103</description>
+		<compiler name="default" spec="mn103.cspec" id="default"/>
+	</language>
+
+</language_definitions>
