@@ -1,0 +1,5 @@
+bin/
+build/
+dist/
+
+data/manuals/mn1030_manual.txt
