@@ -8,7 +8,7 @@ define register offset=0x00 size=4 [ A0 A1 A2 A3 ];
 define register offset=0x10 size=4 [ D0 D1 D2 D3 ]; 
 define register offset=0x20 size=4 [ MDR LIR LAR ]; 
 define register offset=0x30 size=4 [ PC SP  ]; 
-define register offset=0x50 size=2 [ PSW ];
+define register offset=0x50 size=2 [ PSW ]; # real size is 2, but am33 add epsw which is extended psw. is at same address or whatever so idk. could probably define it at same offset
 
 define register offset=0x80 size=4 [ mult_addr ];	# Special internal register for dealing with multiple stores/loads
 
@@ -18,8 +18,8 @@ define pcodeop mn_todo;
 
 @define ZF  "PSW[0,1]"   # Zero flag
 @define NF  "PSW[1,1]"   # Negative flag
-@define CF  "PSW[2,1]"   # Carry flag - 16 bit!
-@define VF  "PSW[3,1]"   # Overflow flag - 16 bit!
+@define CF  "PSW[2,1]"   # Carry flag 
+@define VF  "PSW[3,1]"   # Overflow flag
 @define IM0 "PSW[8,1]"   # Interrupt mask 0
 @define IM1 "PSW[9,1]"   # Interrupt mask 1
 @define IM2 "PSW[10,1]"  # Interrupt mask 2
@@ -269,7 +269,7 @@ D32rel: reloc is d32 	[ reloc = inst_start + d32; ] { export *[ram]:4 reloc; }
 :MOV (Dm, An), Du 		is op8=0xF3; op2i=0 & Du & Dm & An  		{ Du = *(Dm + An); }
 :MOV (IMM16), Dn 		is op4=0x3 & op2m=0 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = *:4 addr; }
 :MOV (IMM32), Dn 		is op8=0xFC; op4=0xa & op2m=1 & Dn; IMM32 	{ Dn = *(IMM32); }
-:MOV (Am), An 			is op8=0xF0; op4=0 & Am & An  				{ An = *(Am); }
+:MOV (Am1), An0 		is op8=0xF0; op4=0 & An0 & Am1  			{ An0 = *(Am1); }
 :MOV (D8, An), Am 		is op8=0xF8; op4=2 & Am & An; D8  			{ Am = *(An + sext(D8)); }
 :MOV (D16, An), Am 		is op8=0xFA; op4=2 & Am & An; D16  			{ Am = *(An + sext(D16)); }
 :MOV (D32, An), Am 		is op8=0xFC; op4=2 & Am & An; D32  			{ Am = *(An + sext(D32)); }
@@ -304,12 +304,12 @@ D32rel: reloc is d32 	[ reloc = inst_start + d32; ] { export *[ram]:4 reloc; }
 :MOV "SP", (D8, An) 	is op8=0xF8; op4=0xf & op2m=1 & An; D8  	{ *(SP + sext(D8)) = SP; }
 
 # Think in manual this is sext, but in code looks like zext
-:MOV IMM8, Dn0 		is op4=0x8 & Dn0 & Dn1 & reg0=reg1; IMM8 	{ Dn0 = zext(IMM8); }
-:MOV IMM16, Dn 		is op4=0x2 & op2m=3 & Dn; IMM16 			{ Dn = zext(IMM16); }
-:MOV IMM32, Dn 		is op8=0xFC; op4=0xc & op2m=3 & Dn; IMM32 	{ Dn = zext(IMM32); }
-:MOV IMM8, An0 		is op4=0x9 & An0 & An1 & reg0=reg1; IMM8 	{ An0 = zext(IMM8); }
-:MOV IMM16, An 		is op4=0x2 & op2m=1 & An; IMM16 			{ An = zext(IMM16); }
-:MOV IMM32, An 		is op8=0xFC; op4=0xd & op2m=3 & An; IMM32 	{ An = zext(IMM32); }
+:MOV IMM8, Dn0 		is op4=0x8 & Dn0 & Dn1 & reg0=reg1; IMM8 	{ Dn0 = sext(IMM8); }
+:MOV IMM16, Dn 		is op4=0x2 & op2m=3 & Dn; IMM16 			{ Dn = sext(IMM16); }
+:MOV IMM32, Dn 		is op8=0xFC; op4=0xc & op2m=3 & Dn; IMM32 	{ Dn = sext(IMM32); }
+:MOV IMM8, An0 		is op4=0x9 & An0 & An1 & reg0=reg1; IMM8 	{ An0 = sext(IMM8); }
+:MOV IMM16, An 		is op4=0x2 & op2m=1 & An; IMM16 			{ An = sext(IMM16); }
+:MOV IMM32, An 		is op8=0xFC; op4=0xd & op2m=3 & An; IMM32 	{ An = sext(IMM32); }
 
 
 
@@ -328,12 +328,12 @@ D32rel: reloc is d32 	[ reloc = inst_start + d32; ] { export *[ram]:4 reloc; }
 :MOVBU Dm, (D8 , An) 	is op8=0xf8; op4=0x5 & Dm & An; D8  		{ *:1 (An + sext(D8)) = Dm:1; }
 :MOVBU Dm, (D16, An) 	is op8=0xfa; op4=0x5 & Dm & An; D16  		{ *:1 (An + sext(D16)) = Dm:1; }
 :MOVBU Dm, (D32, An) 	is op8=0xfc; op4=0x5 & Dm & An; D32  		{ *:1 (An + D32) = Dm:1; }
-:MOVBU Dm, (D8 , "SP") 	is op8=0xf8; op4=0x9 & Dm & op2n=2; D8  	{ *:1 (SP + zext(D8)) = Dm; }
-:MOVBU Dm, (D16, "SP") 	is op8=0xfa; op4=0x9 & Dm & op2n=2; D16  	{ *:1 (SP + zext(D16)) = Dm; }
-:MOVBU Dm, (D32, "SP") 	is op8=0xfc; op4=0x9 & Dm & op2n=2; D32  	{ *:1 (SP + D32) = Dm; }
-:MOVBU Du, (Dm, An) 	is op8=0xf4; op2i=1 & Du & Dm & An  		{ *:1 (Dm + An) = Du; }
-:MOVBU Dm, (IMM16) 		is op4=0x0 & Dm & op2n=2; IMM16 			{ local addr:4 = zext(IMM16); *:1 addr = Dm; }
-:MOVBU Dm, (IMM32) 		is op8=0xFC; op4=0x8 & Dm & op2n=2; IMM32 	{ *:1 IMM32 = Dm; }
+:MOVBU Dm, (D8 , "SP") 	is op8=0xf8; op4=0x9 & Dm & op2n=2; D8  	{ *:1 (SP + zext(D8)) = Dm:1; }
+:MOVBU Dm, (D16, "SP") 	is op8=0xfa; op4=0x9 & Dm & op2n=2; D16  	{ *:1 (SP + zext(D16)) = Dm:1; }
+:MOVBU Dm, (D32, "SP") 	is op8=0xfc; op4=0x9 & Dm & op2n=2; D32  	{ *:1 (SP + D32) = Dm:1; }
+:MOVBU Du, (Dm, An) 	is op8=0xf4; op2i=1 & Du & Dm & An  		{ *:1 (Dm + An) = Du:1; }
+:MOVBU Dm, (IMM16) 		is op4=0x0 & Dm & op2n=2; IMM16 			{ local addr:4 = zext(IMM16); *:1 addr = Dm:1; }
+:MOVBU Dm, (IMM32) 		is op8=0xFC; op4=0x8 & Dm & op2n=2; IMM32 	{ *:1 IMM32 = Dm:1; }
 
 # TODO: Movb. doesnt have bits in table
 
@@ -349,16 +349,16 @@ D32rel: reloc is d32 	[ reloc = inst_start + d32; ] { export *[ram]:4 reloc; }
 :MOVHU (IMM16), Dn 		is op4=0x3 & op2m=2 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = zext(*:2 addr); }
 :MOVHU (IMM32), Dn 		is op8=0xFC; op4=0xa & op2m=3 & Dn; IMM32 	{ Dn = zext(*:2 IMM32); }
 
-:MOVHU Dm, (An) 		is op8=0xf0; op4=0x7 & Dm & An  			{ *:2 An = Dm; }
-:MOVHU Dm, (D8 , An) 	is op8=0xf8; op4=0x7 & Dm & An; D8  		{ *:2 (An + sext(D8)) = Dm; } # TODO: probably error in document.
-:MOVHU Dm, (D16, An) 	is op8=0xfa; op4=0x7 & Dm & An; D16  		{ *:2 (An + sext(D16)) = Dm; }
-:MOVHU Dm, (D32, An) 	is op8=0xfc; op4=0x7 & Dm & An; D32  		{ *:2 (An + D32) = Dm; }
-:MOVHU Dm, (D8 , "SP") 	is op8=0xf8; op4=0x9 & Dm & op2n=3; D8  	{ *:2 (SP + zext(D8)) = Dm; }
-:MOVHU Dm, (D16, "SP") 	is op8=0xfa; op4=0x9 & Dm & op2n=3; D16  	{ *:2 (SP + zext(D16)) = Dm; }
-:MOVHU Dm, (D32, "SP") 	is op8=0xfc; op4=0x9 & Dm & op2n=3; D32  	{ *:2 (SP + D32) = Dm; }
-:MOVHU Du, (Dm, An) 	is op8=0xf4; op2i=3 & Du & Dm & An  		{ *:2 (Dm + An) = Du; }
-:MOVHU Dm, (IMM16) 		is op4=0x0 & Dm & op2n=3; IMM16 			{ local addr:4 = zext(IMM16); *:2 addr = Dm; }
-:MOVHU Dm, (IMM32) 		is op8=0xFC; op4=0x8 & Dm & op2n=3; IMM32 	{ *:2 IMM32 = Dm; }
+:MOVHU Dm, (An) 		is op8=0xf0; op4=0x7 & Dm & An  			{ *:2 An = Dm:2; }
+:MOVHU Dm, (D8 , An) 	is op8=0xf8; op4=0x7 & Dm & An; D8  		{ *:2 (An + sext(D8)) = Dm:2; } # TODO: probably error in document.
+:MOVHU Dm, (D16, An) 	is op8=0xfa; op4=0x7 & Dm & An; D16  		{ *:2 (An + sext(D16)) = Dm:2; }
+:MOVHU Dm, (D32, An) 	is op8=0xfc; op4=0x7 & Dm & An; D32  		{ *:2 (An + D32) = Dm:2; }
+:MOVHU Dm, (D8 , "SP") 	is op8=0xf8; op4=0x9 & Dm & op2n=3; D8  	{ *:2 (SP + zext(D8)) = Dm:2; }
+:MOVHU Dm, (D16, "SP") 	is op8=0xfa; op4=0x9 & Dm & op2n=3; D16  	{ *:2 (SP + zext(D16)) = Dm:2; }
+:MOVHU Dm, (D32, "SP") 	is op8=0xfc; op4=0x9 & Dm & op2n=3; D32  	{ *:2 (SP + D32) = Dm:2; }
+:MOVHU Du, (Dm, An) 	is op8=0xf4; op2i=3 & Du & Dm & An  		{ *:2 (Dm + An) = Du:2; }
+:MOVHU Dm, (IMM16) 		is op4=0x0 & Dm & op2n=3; IMM16 			{ local addr:4 = zext(IMM16); *:2 addr = Dm:2; }
+:MOVHU Dm, (IMM32) 		is op8=0xFC; op4=0x8 & Dm & op2n=3; IMM32 	{ *:2 IMM32 = Dm:2; }
 
 :MOVM ("SP"), PopRegsBrace 	is op8=0xce; PopRegsBrace  			{ mult_addr = SP; build PopRegsBrace; SP = mult_addr; }
 :MOVM RegsBrace, ("SP") 	is op8=0xcf; RegsBrace  			{ mult_addr = SP; build RegsBrace; SP = mult_addr; }
@@ -378,10 +378,6 @@ macro update_ZN_S32(val) {
 	$(ZF) = (val == 0);
 	$(NF) = val s< 0;
 	# $(NF) = (val & 0x80000000) != 0;
-}
-macro update_ZN_U32(val) {
-    $(ZF) = (val == 0);
-    $(NF) = 0;
 }
 
 macro update_add(a, b) {
@@ -432,7 +428,7 @@ macro update_sub(a, b) {
 
 
 :MUL Dm1, Dn0 		is op8=0xF2; op4=0x4 & Dm1 & Dn0 				{ local r:8=sext(Dm1)*sext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_S32(Dn0); }
-:MULU Dm1, Dn0 		is op8=0xF2; op4=0x5 & Dm1 & Dn0 				{ local r:8=zext(Dm1)*zext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_U32(Dn0); }
+:MULU Dm1, Dn0 		is op8=0xF2; op4=0x5 & Dm1 & Dn0 				{ local r:8=zext(Dm1)*zext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_S32(Dn0); }
 
 :DIV Dm1, Dn0 		is op8=0xF2; op4=0x6 & Dm1 & Dn0 				
 { 
@@ -465,7 +461,7 @@ macro update_sub(a, b) {
 	local rem:8 = r % v1;
 	Dn0 = div:4; 
 	MDR = rem:4; 
-	update_ZN_U32(Dn0); 
+	update_ZN_S32(Dn0); 
 }
 
 
@@ -544,16 +540,16 @@ macro update_sub(a, b) {
 
 # branch
 
-:BEQ D8rel 	is op8=0xc8; D8rel 				{ if ($(ZF) == 1) goto D8rel; }
-:BNE D8rel 	is op8=0xc9; D8rel 				{ if ($(ZF) == 0) goto D8rel; }
-:BGT D8rel 	is op8=0xc1; D8rel 				{ if (($(ZF) | ($(NF) ^ $(VF))) == 0) goto D8rel; }
-:BGE D8rel 	is op8=0xc2; D8rel 				{ if (($(NF) ^ $(VF)) == 0) goto D8rel; }
-:BLE D8rel 	is op8=0xc3; D8rel 				{ if ($(ZF) | ($(NF) ^ $(VF)) == 1) goto D8rel;}
-:BLT D8rel 	is op8=0xc0; D8rel 				{ if (($(NF) ^ $(VF)) == 1) goto D8rel; }
-:BHI D8rel 	is op8=0xc5; D8rel 				{ if (($(CF) | $(ZF)) == 0) goto D8rel; }
-:BCC D8rel 	is op8=0xc6; D8rel 				{ if ($(CF) == 0) goto D8rel; }
-:BLS D8rel 	is op8=0xc7; D8rel 				{ if (($(CF) | $(ZF)) == 1) goto D8rel; }
-:BCS D8rel 	is op8=0xc4; D8rel 				{ if ($(CF) == 1) goto D8rel; }
+:BEQ D8rel 	is op8=0xc8; D8rel 				{ if ($(ZF) == 1) 						goto D8rel; }
+:BNE D8rel 	is op8=0xc9; D8rel 				{ if ($(ZF) == 0) 						goto D8rel; }
+:BGT D8rel 	is op8=0xc1; D8rel 				{ if (($(ZF) | ($(NF) ^ $(VF))) == 0) 	goto D8rel; }
+:BGE D8rel 	is op8=0xc2; D8rel 				{ if (($(NF) ^ $(VF)) == 0) 			goto D8rel; }
+:BLE D8rel 	is op8=0xc3; D8rel 				{ if ($(ZF) | ($(NF) ^ $(VF)) == 1) 	goto D8rel;}
+:BLT D8rel 	is op8=0xc0; D8rel 				{ if (($(NF) ^ $(VF)) == 1) 			goto D8rel; }
+:BHI D8rel 	is op8=0xc5; D8rel 				{ if (($(CF) | $(ZF)) == 0) 			goto D8rel; }
+:BCC D8rel 	is op8=0xc6; D8rel 				{ if ($(CF) == 0) 						goto D8rel; }
+:BLS D8rel 	is op8=0xc7; D8rel 				{ if (($(CF) | $(ZF)) == 1) 			goto D8rel; }
+:BCS D8rel 	is op8=0xc4; D8rel 				{ if ($(CF) == 1) 						goto D8rel; }
 
 :BVC D8rel 	is op8=0xf8; op8=0xe8; D8rel 	{ if ($(VF) == 0) goto D8rel; }
 :BVS D8rel 	is op8=0xf8; op8=0xe9; D8rel 	{ if ($(VF) == 1) goto D8rel; }
