@@ -10,11 +10,313 @@
 		<register name="PSW" group="FLAGS" />
 	</register_data>
   
-<!--
   <default_memory_blocks>
-    <memory_block name="iram"  start_address="0x00000000" length="0x20000000" mode="rwx" initialized="false" />
-    <memory_block name="mmio"  start_address="0x20000000" length="0x20000000" mode="rwv" initialized="false" />
-    <memory_block name="rom"   start_address="0x40000000" length="0x80000000" mode="rwx" initialized="false" />  
+    <memory_block name="mmio"  start_address="0xC0000000" length="0x20000000" mode="rwv" initialized="false" />
   </default_memory_blocks>
-  -->
+
+  <default_symbols>
+    <symbol name="IVAR0" address="ram:0xC0000000" entry="true"/>
+    <symbol name="IVAR1" address="ram:0xC0000004" entry="true"/>
+    <symbol name="IVAR2" address="ram:0xC0000008" entry="true"/>
+    <symbol name="IVAR3" address="ram:0xC000000c" entry="true"/>
+    <symbol name="IVAR4" address="ram:0xC0000010" entry="true"/>
+    <symbol name="IVAR5" address="ram:0xC0000014" entry="true"/>
+    <symbol name="IVAR6" address="ram:0xC0000018" entry="true"/>
+
+    <symbol name="TBR"  address="ram:0xC0000024" entry="true"/>
+    <symbol name="DEAR" address="ram:0xC0000038" entry="true"/>
+    <symbol name="SISR" address="ram:0xC0000044" entry="true"/>
+
+	<!--  mn2ws0050 regs -->
+    <symbol name="CPUID" address="ram:0xC0000054" entry="true"/>
+
+    <symbol name="CHCTR" address="ram:0xC0000070" entry="true"/>
+
+    <symbol name="MMUCTR" address="ram:0xC0000090" entry="true"/>
+    <symbol name="PIDR" address="ram:0xC0000094" entry="true"/>
+    <symbol name="IPTEL" address="ram:0xC00000a0" entry="true"/>
+    <symbol name="IPTEU" address="ram:0xC00000a4" entry="true"/>
+    <symbol name="IPTEL2" address="ram:0xC00000a8" entry="true"/>
+    <symbol name="DPTEL" address="ram:0xC00000b0" entry="true"/>
+    <symbol name="DPTEU" address="ram:0xC00000b4" entry="true"/>
+    <symbol name="DPTEL2" address="ram:0xC00000b8" entry="true"/>
+    <symbol name="MMUFCR" address="ram:0xC000009c" entry="true"/>
+    
+
+	<!--  mn2ws0050 regs -->
+    <symbol name="ECHCTR" address="ram:0xC0000c20" entry="true"/>
+
+    
+    <symbol name="BCCR" address="ram:0xC0002000" entry="true"/>
+    <symbol name="BCBERR" address="ram:0xC0002010" entry="true"/>
+    <symbol name="BCBEAR" address="ram:0xC0002020" entry="true"/>
+    
+    
+	<!--  theese dmas is probably cpu specific. MN103e010h specifies theese. while mn2ws0050 is 0xd4005000 and has some offsets based on core idx and register  -->
+	<!-- 
+    <symbol name="DM0CTR" address="ram:0xd2000000" entry="true"/>
+    <symbol name="DM0SRC" address="ram:0xd2000004" entry="true"/>
+    <symbol name="DM0DST" address="ram:0xd2000008" entry="true"/>
+    <symbol name="DM0SIZ" address="ram:0xd200000c" entry="true"/>
+    <symbol name="DM0SYC" address="ram:0xd2000010" entry="true"/>
+    <symbol name="DM1CTR" address="ram:0xd2000100" entry="true"/>
+    <symbol name="DM1SRC" address="ram:0xd2000104" entry="true"/>
+    <symbol name="DM1DST" address="ram:0xd2000108" entry="true"/>
+    <symbol name="DM1SIZ" address="ram:0xd200010c" entry="true"/>
+    <symbol name="DM1SYC" address="ram:0xd2000110" entry="true"/>
+    <symbol name="DM2CTR" address="ram:0xd2000200" entry="true"/>
+    <symbol name="DM2SRC" address="ram:0xd2000204" entry="true"/>
+    <symbol name="DM2DST" address="ram:0xd2000208" entry="true"/>
+    <symbol name="DM2SIZ" address="ram:0xd200020c" entry="true"/>
+    <symbol name="DM2SYC" address="ram:0xd2000210" entry="true"/>
+    <symbol name="DM3CTR" address="ram:0xd2000300" entry="true"/>
+    <symbol name="DM3SRC" address="ram:0xd2000304" entry="true"/>
+    <symbol name="DM3DST" address="ram:0xd2000308" entry="true"/>
+    <symbol name="DM3SIZ" address="ram:0xd200030c" entry="true"/>
+    <symbol name="DM3SYC" address="ram:0xd2000310" entry="true"/>
+    --> 
+
+	<!--  theese icrs is probably cpu specific. MN103e010h specifies theese. while mn2ws0050 is 0xc4000000 and has some offsets based on core idx and register  -->
+
+	<!-- 
+    <symbol name="G0ICR" address="ram:0xd4000000" entry="true"/>
+    <symbol name="G1ICR" address="ram:0xd4000004" entry="true"/>
+    <symbol name="G2ICR" address="ram:0xd4000008" entry="true"/>
+    <symbol name="G3ICR" address="ram:0xd400000c" entry="true"/>
+    <symbol name="G4ICR" address="ram:0xd4000010" entry="true"/>
+    <symbol name="G5ICR" address="ram:0xd4000014" entry="true"/>
+    <symbol name="G6ICR" address="ram:0xd4000018" entry="true"/>
+    <symbol name="G7ICR" address="ram:0xd400001c" entry="true"/>
+    <symbol name="G8ICR" address="ram:0xd4000020" entry="true"/>
+    <symbol name="G9ICR" address="ram:0xd4000024" entry="true"/>
+    <symbol name="G10ICR" address="ram:0xd4000028" entry="true"/>
+    <symbol name="G11ICR" address="ram:0xd400002c" entry="true"/>
+    <symbol name="G12ICR" address="ram:0xd4000030" entry="true"/>
+    <symbol name="G13ICR" address="ram:0xd4000034" entry="true"/>
+    <symbol name="G14ICR" address="ram:0xd4000038" entry="true"/>
+    <symbol name="G15ICR" address="ram:0xd400003c" entry="true"/>
+    <symbol name="G16ICR" address="ram:0xd4000040" entry="true"/>
+    <symbol name="G17ICR" address="ram:0xd4000044" entry="true"/>
+    <symbol name="G18ICR" address="ram:0xd4000048" entry="true"/>
+    <symbol name="G19ICR" address="ram:0xd400004c" entry="true"/>
+    <symbol name="G20ICR" address="ram:0xd4000050" entry="true"/>
+    <symbol name="G21ICR" address="ram:0xd4000054" entry="true"/>
+    <symbol name="G22ICR" address="ram:0xd4000058" entry="true"/>
+    <symbol name="G23ICR" address="ram:0xd400005c" entry="true"/>
+    <symbol name="G24ICR" address="ram:0xd4000060" entry="true"/>
+    <symbol name="G25ICR" address="ram:0xd4000064" entry="true"/>
+    <symbol name="G26ICR" address="ram:0xd4000068" entry="true"/>
+    <symbol name="G27ICR" address="ram:0xd400006c" entry="true"/>
+    <symbol name="G28ICR" address="ram:0xd4000070" entry="true"/>
+    <symbol name="G29ICR" address="ram:0xd4000074" entry="true"/>
+    <symbol name="G30ICR" address="ram:0xd4000078" entry="true"/>
+    <symbol name="G31ICR" address="ram:0xd400007c" entry="true"/>
+    <symbol name="G32ICR" address="ram:0xd4000080" entry="true"/>
+    <symbol name="G33ICR" address="ram:0xd4000084" entry="true"/>
+    <symbol name="G34ICR" address="ram:0xd4000088" entry="true"/>
+    <symbol name="G35ICR" address="ram:0xd400008c" entry="true"/>
+    <symbol name="G36ICR" address="ram:0xd4000090" entry="true"/>
+    <symbol name="G37ICR" address="ram:0xd4000094" entry="true"/>
+    <symbol name="G38ICR" address="ram:0xd4000098" entry="true"/>
+    <symbol name="G39ICR" address="ram:0xd400009c" entry="true"/>
+    <symbol name="G40ICR" address="ram:0xd40000a0" entry="true"/>
+    <symbol name="G41ICR" address="ram:0xd40000a4" entry="true"/>
+    --> 
+    <symbol name="IAGR" address="ram:0xd4000100" entry="true"/>
+    <symbol name="EXTDM" address="ram:0xd4000200" entry="true"/>
+
+    <symbol name="WDBC" address="ram:0xd4001000" entry="true"/>
+    <symbol name="WDBCTR" address="ram:0xd4001002" entry="true"/>
+    <symbol name="RSTCTR" address="ram:0xd4001004" entry="true"/>
+
+
+
+    <symbol name="SC0CTR" address="ram:0xd4002000" entry="true"/>
+    <symbol name="SC0ICR" address="ram:0xd4002004" entry="true"/>
+    <symbol name="SC0TXB" address="ram:0xd4002008" entry="true"/>
+    <symbol name="SC0RXB" address="ram:0xd4002009" entry="true"/>
+    <symbol name="SC0STR" address="ram:0xd400200c" entry="true"/>
+    <symbol name="SC1CTR" address="ram:0xd4002010" entry="true"/>
+    <symbol name="SC1ICR" address="ram:0xd4002014" entry="true"/>
+    <symbol name="SC1TXB" address="ram:0xd4002018" entry="true"/>
+    <symbol name="SC1RXB" address="ram:0xd4002019" entry="true"/>
+    <symbol name="SC1STR" address="ram:0xd400201c" entry="true"/>
+    <symbol name="SC2CTR" address="ram:0xd4002020" entry="true"/>
+    <symbol name="SC2ICR" address="ram:0xd4002024" entry="true"/>
+    <symbol name="SC2TXB" address="ram:0xd4002028" entry="true"/>
+    <symbol name="SC2RXB" address="ram:0xd4002029" entry="true"/>
+    <symbol name="SC2STR" address="ram:0xd400202c" entry="true"/>
+    <symbol name="SC2TIM" address="ram:0xd400202d" entry="true"/>
+
+    <symbol name="TM0MD" address="ram:0xd4003000" entry="true"/>
+    <symbol name="TM1MD" address="ram:0xd4003001" entry="true"/>
+    <symbol name="TM2MD" address="ram:0xd4003002" entry="true"/>
+    <symbol name="TM3MD" address="ram:0xd4003003" entry="true"/>
+    <symbol name="TM0BR" address="ram:0xd4003010" entry="true"/>
+    <symbol name="TM1BR" address="ram:0xd4003011" entry="true"/>
+    <symbol name="TM2BR" address="ram:0xd4003012" entry="true"/>
+    <symbol name="TM3BR" address="ram:0xd4003013" entry="true"/>
+    <symbol name="TM0BC" address="ram:0xd4003020" entry="true"/>
+    <symbol name="TM1BC" address="ram:0xd4003021" entry="true"/>
+    <symbol name="TM2BC" address="ram:0xd4003022" entry="true"/>
+    <symbol name="TM3BC" address="ram:0xd4003023" entry="true"/>
+    <symbol name="TMPSCNT" address="ram:0xd4003071" entry="true"/>
+    <symbol name="TM4MD" address="ram:0xd4003080" entry="true"/>
+    <symbol name="TM5MD" address="ram:0xd4003082" entry="true"/>
+    <symbol name="TM6MD" address="ram:0xd4003084" entry="true"/>
+    <symbol name="TM7MD" address="ram:0xd4003086" entry="true"/>
+    <symbol name="TM8MD" address="ram:0xd4003088" entry="true"/>
+    <symbol name="TM9MD" address="ram:0xd400308a" entry="true"/>
+    <symbol name="TM10MD" address="ram:0xd400308c" entry="true"/>
+    <symbol name="TM11MD" address="ram:0xd400308e" entry="true"/>
+    <symbol name="TM4BR" address="ram:0xd4003090" entry="true"/>
+    <symbol name="TM5BR" address="ram:0xd4003092" entry="true"/>
+    <symbol name="TM6BR" address="ram:0xd4003094" entry="true"/>
+    <symbol name="TM7BR" address="ram:0xd4003096" entry="true"/>
+    <symbol name="TM8BR" address="ram:0xd4003098" entry="true"/>
+    <symbol name="TM9BR" address="ram:0xd400309a" entry="true"/>
+    <symbol name="TM10BR" address="ram:0xd400309c" entry="true"/>
+    <symbol name="TM11BR" address="ram:0xd400309e" entry="true"/>
+    <symbol name="TM4BC" address="ram:0xd40030a0" entry="true"/>
+    <symbol name="TM5BC" address="ram:0xd40030a2" entry="true"/>
+    <symbol name="TM6BC" address="ram:0xd40030a4" entry="true"/>
+    <symbol name="TM7BC" address="ram:0xd40030a6" entry="true"/>
+    <symbol name="TM8BC" address="ram:0xd40030a8" entry="true"/>
+    <symbol name="TM9BC" address="ram:0xd40030aa" entry="true"/>
+    <symbol name="TM10BC" address="ram:0xd40030ac" entry="true"/>
+    <symbol name="TM11BC" address="ram:0xd40030ae" entry="true"/>
+
+    <symbol name="TM6MDA" address="ram:0xd40030b4" entry="true"/>
+    <symbol name="TM6MDB" address="ram:0xd40030b5" entry="true"/>
+    <symbol name="TM6CA" address="ram:0xd40030c4" entry="true"/>
+    <symbol name="TM6CB" address="ram:0xd40030d4" entry="true"/>
+    
+    
+    
+    <symbol name="AFESYS" address="ram:0xd8300000" entry="true"/>
+    <symbol name="AFEINTM" address="ram:0xd8300004" entry="true"/>
+    <symbol name="AFESTAT" address="ram:0xd8300008" entry="true"/>
+    <symbol name="AFECTR" address="ram:0xd830000c" entry="true"/>
+    <symbol name="AFETBUF" address="ram:0xd8300010" entry="true"/>
+    <symbol name="AFERBUF" address="ram:0xd8300014" entry="true"/>
+    <symbol name="AFEFIFO" address="ram:0xd8300018" entry="true"/>
+    <symbol name="AFEEYE" address="ram:0xd830001c" entry="true"/>
+    <symbol name="AFESEC" address="ram:0xd8300020" entry="true"/>
+    
+    
+    <symbol name="IIC0DTRM" address="ram:0xd8400000" entry="true"/>
+    <symbol name="IIC0DREC" address="ram:0xd8400004" entry="true"/>
+    <symbol name="IIC0MYAD" address="ram:0xd8400008" entry="true"/>
+    <symbol name="IIC0CLK"  address="ram:0xd840000c" entry="true"/>
+    <symbol name="IIC0BRST" address="ram:0xd8400010" entry="true"/>
+    <symbol name="IIC0BSTS" address="ram:0xd8400014" entry="true"/>
+    <symbol name="IIC1DTRM" address="ram:0xd8401000" entry="true"/>
+    <symbol name="IIC1DREC" address="ram:0xd8401004" entry="true"/>
+    <symbol name="IIC1MYAD" address="ram:0xd8401008" entry="true"/>
+    <symbol name="IIC1CLK"  address="ram:0xd840100c" entry="true"/>
+    <symbol name="IIC1BRST" address="ram:0xd8401010" entry="true"/>
+    <symbol name="IIC1BSTS" address="ram:0xd8401014" entry="true"/>
+
+    <symbol name="ADCTR" address="ram:0xd8500000" entry="true"/>
+    <symbol name="AD0BUF" address="ram:0xd8500010" entry="true"/>
+    <symbol name="AD1BUF" address="ram:0xd8500012" entry="true"/>
+    <symbol name="AD2BUF" address="ram:0xd8500014" entry="true"/>
+    <symbol name="AD3BUF" address="ram:0xd8500016" entry="true"/>
+    <symbol name="AD4BUF" address="ram:0xd8500018" entry="true"/>
+    <symbol name="AD5BUF" address="ram:0xd850001a" entry="true"/>
+    <symbol name="AD6BUF" address="ram:0xd850001c" entry="true"/>
+    <symbol name="AD7BUF" address="ram:0xd850001e" entry="true"/>
+    
+    <!-- TODO: RTC 0xd8600000 -->
+    <!-- TODO: IrDA 0xd8700000 -->
+
+
+
+    <symbol name="SBBASE0" address="ram:0xd8c00100" entry="true"/>
+    <symbol name="SBBASE1" address="ram:0xd8c00110" entry="true"/>
+    <symbol name="SBBASE2" address="ram:0xd8c00120" entry="true"/>
+    <symbol name="SBBASE3" address="ram:0xd8c00130" entry="true"/>
+    <symbol name="SBBASE4" address="ram:0xd8c00140" entry="true"/>
+    <symbol name="SBBASE5" address="ram:0xd8c00150" entry="true"/>
+    <symbol name="SBBASE6" address="ram:0xd8c00160" entry="true"/>
+    <symbol name="SBBASE7" address="ram:0xd8c00170" entry="true"/>
+
+    <symbol name="SBCTRL00" address="ram:0xd8c00200" entry="true"/>
+    <symbol name="SBCTRL01" address="ram:0xd8c00204" entry="true"/>
+    <symbol name="SBCTRL02" address="ram:0xd8c00208" entry="true"/>
+
+    <symbol name="SBCTRL10" address="ram:0xd8c00210" entry="true"/>
+    <symbol name="SBCTRL11" address="ram:0xd8c00214" entry="true"/>
+    <symbol name="SBCTRL12" address="ram:0xd8c00218" entry="true"/>
+    <symbol name="SBCTRL20" address="ram:0xd8c00220" entry="true"/>
+    <symbol name="SBCTRL21" address="ram:0xd8c00224" entry="true"/>
+    <symbol name="SBCTRL22" address="ram:0xd8c00228" entry="true"/>
+    <symbol name="SBCTRL30" address="ram:0xd8c00230" entry="true"/>
+    <symbol name="SBCTRL31" address="ram:0xd8c00234" entry="true"/>
+    <symbol name="SBCTRL32" address="ram:0xd8c00238" entry="true"/>
+    <symbol name="SBCTRL40" address="ram:0xd8c00240" entry="true"/>
+    <symbol name="SBCTRL41" address="ram:0xd8c00244" entry="true"/>
+    <symbol name="SBCTRL42" address="ram:0xd8c00248" entry="true"/>
+    <symbol name="SBCTRL50" address="ram:0xd8c00250" entry="true"/>
+    <symbol name="SBCTRL51" address="ram:0xd8c00254" entry="true"/>
+    <symbol name="SBCTRL52" address="ram:0xd8c00258" entry="true"/>
+    <symbol name="SBCTRL60" address="ram:0xd8c00260" entry="true"/>
+    <symbol name="SBCTRL61" address="ram:0xd8c00264" entry="true"/>
+    <symbol name="SBCTRL62" address="ram:0xd8c00268" entry="true"/>
+    <symbol name="SBCTRL70" address="ram:0xd8c00270" entry="true"/>
+    <symbol name="SBCTRL71" address="ram:0xd8c00274" entry="true"/>
+    <symbol name="SBCTRL72" address="ram:0xd8c00278" entry="true"/>
+
+	<!--  mn2ws0050 nand regs -->
+    <symbol name="FCOMMAND" address="ram:0xd8f00000" entry="true"/>
+    <symbol name="FADD" address="ram:0xd8f00004" entry="true"/>
+    <symbol name="FADD2" address="ram:0xd8f00008" entry="true"/>
+    <symbol name="FJUDGE" address="ram:0xd8f0000c" entry="true"/>
+    <symbol name="FECC11" address="ram:0xd8f00010" entry="true"/>
+    <symbol name="FECC12" address="ram:0xd8f00014" entry="true"/>
+    <symbol name="FECC21" address="ram:0xd8f00018" entry="true"/>
+    <symbol name="FECC22" address="ram:0xd8f0001c" entry="true"/>
+    <symbol name="FECC31" address="ram:0xd8f00020" entry="true"/>
+    <symbol name="FECC32" address="ram:0xd8f00024" entry="true"/>
+    <symbol name="FECC41" address="ram:0xd8f00028" entry="true"/>
+    <symbol name="FECC42" address="ram:0xd8f0002c" entry="true"/>
+    <symbol name="FDATA" address="ram:0xd8f00030" entry="true"/>
+    <symbol name="FPWS" address="ram:0xd8f00100" entry="true"/>
+    <symbol name="FCOMMAND2" address="ram:0xd8f00110" entry="true"/>
+    <symbol name="FNUM" address="ram:0xd8f00114" entry="true"/>
+    <symbol name="FSDATA" address="ram:0xd8f00400" entry="true"/>
+
+    <symbol name="SDRAMBUS" address="ram:0xda000000" entry="true"/>
+    <symbol name="SDREFCNT" address="ram:0xda000004" entry="true"/>
+    <symbol name="SDBASE0" address="ram:0xda000008" entry="true"/>
+    <symbol name="SDBASE1" address="ram:0xda00000c" entry="true"/>
+    <symbol name="SDSHDW" address="ram:0xda000010" entry="true"/>
+
+	<!-- 0xda4 is probably for sdcard? -->
+
+    <symbol name="P0MD"  address="ram:0xdb000000" entry="true"/>
+    <symbol name="P0IN"  address="ram:0xdb000004" entry="true"/>
+    <symbol name="P0OUT" address="ram:0xdb000008" entry="true"/>
+    <symbol name="P0MIO" address="ram:0xdb00000c" entry="true"/>
+    <symbol name="P1MD"  address="ram:0xdb000100" entry="true"/>
+    <symbol name="P1IN"  address="ram:0xdb000104" entry="true"/>
+    <symbol name="P1OUT" address="ram:0xdb000108" entry="true"/>
+    <symbol name="P1MIO" address="ram:0xdb00010c" entry="true"/>
+    <symbol name="P2MD"  address="ram:0xdb000200" entry="true"/>
+    <symbol name="P2IN"  address="ram:0xdb000204" entry="true"/>
+    <symbol name="P2OUT" address="ram:0xdb000208" entry="true"/>
+    <symbol name="P2MIO" address="ram:0xdb00020c" entry="true"/>
+    <symbol name="P3MD"  address="ram:0xdb000300" entry="true"/>
+    <symbol name="P3IN"  address="ram:0xdb000304" entry="true"/>
+    <symbol name="P3OUT" address="ram:0xdb000308" entry="true"/>
+    <symbol name="P3MIO" address="ram:0xdb00030c" entry="true"/>
+    <symbol name="P4MD"  address="ram:0xdb000400" entry="true"/>
+    <symbol name="P4IN"  address="ram:0xdb000404" entry="true"/>
+    <symbol name="P4OUT" address="ram:0xdb000408" entry="true"/>
+    <symbol name="P4MIO" address="ram:0xdb00040c" entry="true"/>
+    <symbol name="P5MD"  address="ram:0xdb000500" entry="true"/>
+    <symbol name="P5IN"  address="ram:0xdb000504" entry="true"/>
+    <symbol name="P5OUT" address="ram:0xdb000508" entry="true"/>
+    <symbol name="P5MIO" address="ram:0xdb00050c" entry="true"/>
+  </default_symbols>
 </processor_spec>
