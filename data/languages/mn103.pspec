@@ -34,13 +34,14 @@
 
     <symbol name="MMUCTR" address="ram:0xC0000090" entry="true"/>
     <symbol name="PIDR" address="ram:0xC0000094" entry="true"/>
+    <symbol name="PTBR" address="ram:0xC0000098" entry="true"/>
+    <symbol name="MMUFCR" address="ram:0xC000009c" entry="true"/>
     <symbol name="IPTEL" address="ram:0xC00000a0" entry="true"/>
     <symbol name="IPTEU" address="ram:0xC00000a4" entry="true"/>
     <symbol name="IPTEL2" address="ram:0xC00000a8" entry="true"/>
     <symbol name="DPTEL" address="ram:0xC00000b0" entry="true"/>
     <symbol name="DPTEU" address="ram:0xC00000b4" entry="true"/>
     <symbol name="DPTEL2" address="ram:0xC00000b8" entry="true"/>
-    <symbol name="MMUFCR" address="ram:0xC000009c" entry="true"/>
     
 
 	<!--  mn2ws0050 regs -->

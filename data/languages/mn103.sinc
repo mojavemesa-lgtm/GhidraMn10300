@@ -245,10 +245,10 @@ D32rel: reloc is d32 	[ reloc = inst_start + d32; ] { export *[ram]:4 reloc; }
 
 # Data instructions
 
-:MOV Dm1, Dn0    	is op4=0x8 & Dm1 & Dn0          	{ Dn0 = Dm1; }
-:MOV Dm1, An0    	is op8=0xF1; op4=0xE & Dm1 & An0    { An0 = Dm1; }
-:MOV Am, Dn    		is op8=0xF1; op4=0xD & Am & Dn      	{ Dn = Am; }
-:MOV Am, An    		is op4=0x9 & Am & An                	{ An = Am; }
+:MOV Dm1, Dn0    	is op4=0x8 & Dm1 & Dn0          		{ Dn0 = Dm1; }
+:MOV Dm1, An0    	is op8=0xF1; op4=0xE & Dm1 & An0    	{ An0 = Dm1; }
+:MOV Am1, Dn0    	is op8=0xF1; op4=0xD & Am1 & Dn0      	{ Dn0 = Am1; }
+:MOV Am1, An0    	is op4=0x9 & Am1 & An0                	{ An0 = Am1; }
 
 :MOV "SP", An  		is op4=0x3 & op2m=3 & An            	{ An = SP; }
 :MOV Am, "SP"  		is op8=0xF2; op4=0xf & Am & op2n=0  	{ SP = Am; }
@@ -269,7 +269,7 @@ D32rel: reloc is d32 	[ reloc = inst_start + d32; ] { export *[ram]:4 reloc; }
 :MOV (Dm, An), Du 		is op8=0xF3; op2i=0 & Du & Dm & An  		{ Du = *(Dm + An); }
 :MOV (IMM16), Dn 		is op4=0x3 & op2m=0 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = *:4 addr; }
 :MOV (IMM32), Dn 		is op8=0xFC; op4=0xa & op2m=1 & Dn; IMM32 	{ Dn = *(IMM32); }
-:MOV (Am1), An0 		is op8=0xF0; op4=0 & An0 & Am1  			{ An0 = *(Am1); }
+:MOV (Am0), An1 		is op8=0xF0; op4=0 & An1 & Am0   			{ An1 = *(Am0); } 								# ???? confusing
 :MOV (D8, An), Am 		is op8=0xF8; op4=2 & Am & An; D8  			{ Am = *(An + sext(D8)); }
 :MOV (D16, An), Am 		is op8=0xFA; op4=2 & Am & An; D16  			{ Am = *(An + sext(D16)); }
 :MOV (D32, An), Am 		is op8=0xFC; op4=2 & Am & An; D32  			{ Am = *(An + sext(D32)); }
@@ -407,10 +407,10 @@ macro update_sub(a, b) {
 :ADD Am1, Dn0 		is op8=0xF1; op4=0x5 & Am1 & Dn0 				{ update_add(Dn0, Am1); } # Panasonic manual sucks ass. 
 :ADD Dm1, An0 		is op8=0xF1; op4=0x6 & Dm1 & An0 				{ update_add(An0, Dm1); }
 :ADD Am1, An0 		is op8=0xF1; op4=0x7 & Am1 & An0 				{ update_add(An0, Am1); }
-:ADD SIMM8, Dn0 		is op4=0x2 & op2m=2 & Dn0; SIMM8			{ update_add(Dn0, sext(SIMM8)); }
+:ADD SIMM8, Dn0 	is op4=0x2 & op2m=2 & Dn0; SIMM8				{ update_add(Dn0, sext(SIMM8)); }
 :ADD SIMM16, Dn0 	is op8=0xFA; op4=0xc & op2m=0 & Dn0; SIMM16 	{ update_add(Dn0, sext(SIMM16)); }
 :ADD SIMM32, Dn0 	is op8=0xFc; op4=0xc & op2m=0 & Dn0; SIMM32 	{ update_add(Dn0, SIMM32); }
-:ADD SIMM8, An0 		is op4=0x2 & op2m=0 & An0; SIMM8			{ update_add(An0, sext(SIMM8)); }
+:ADD SIMM8, An0 	is op4=0x2 & op2m=0 & An0; SIMM8				{ update_add(An0, sext(SIMM8)); }
 :ADD SIMM16, An0 	is op8=0xFA; op4=0xd & op2m=0 & An0; SIMM16 	{ update_add(An0, sext(SIMM16)); }
 :ADD SIMM32, An0 	is op8=0xFc; op4=0xd & op2m=0 & An0; SIMM32 	{ update_add(An0, SIMM32); }
 :ADD SIMM8, "SP" 	is op8=0xF8; op8=0xFE; SIMM8					{ update_add(SP, sext(SIMM8)); }
