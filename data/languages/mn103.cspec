@@ -14,7 +14,7 @@
 		<varnode space="stack" offset="0" size="4" />
 	</returnaddress>
   <default_proto>
-		<prototype name="__mncall" extrapop="0" stackshift="0">
+		<prototype name="__mngcccall" extrapop="0" stackshift="0">
 			<input>
 				<pentry minsize="1" maxsize="4">
 					<register name="D0" />
@@ -68,4 +68,51 @@
 			<register name="SP" />
 		</unaffected>
 	</prototype>
+
+  <prototype name="__mnpanacall" extrapop="0" stackshift="0">
+    <input>
+      <pentry minsize="4" maxsize="4" metatype="ptr">
+        <register name="A0"/>
+      </pentry>
+      <pentry minsize="4" maxsize="4" metatype="ptr">
+        <register name="A1"/>
+      </pentry>
+      <pentry minsize="4" maxsize="4" metatype="ptr">
+        <register name="A2"/>
+      </pentry>
+      <pentry minsize="4" maxsize="4" metatype="ptr">
+        <register name="A3"/>
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D0" />
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D1" />
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D2" />
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D3" />
+      </pentry>
+      <pentry minsize="1" maxsize="512" align="2">
+        <addr offset="12" space="stack" />
+      </pentry>
+    </input>
+    <output>
+      <!-- TODO: dunno return -->
+      <pentry minsize="4" maxsize="4" metatype="ptr">
+        <register name="A0"/>
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D0" />
+      </pentry>
+      <pentry minsize="1" maxsize="512" align="2">
+        <addr offset="12" space="stack" />
+      </pentry>
+    </output>
+	<unaffected>
+		<register name="SP" />
+	</unaffected>
+  </prototype>
 </compiler_spec>
