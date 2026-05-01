@@ -584,15 +584,27 @@ macro update_sub(a, b) {
 # Think manual is right on this one as its same logic in gcc, but introduces annoyanes with ghidra usage. you see all the returnaddresses pushed to stack. 
 # Issue with having a -4 here is that variables gets desynced from actual function. sure you can fix it with cspec somehow but it still stays desynced
 # Maybe just remove the sp thing if youre just using decompiler as the call should work?
+# --
+# bootrom is also annoying here where they push in caller and clean up in callee.. 
+# we can probably assume stack is always delta zero in caller
+# will be inaccurate if you want to use sleigh for emulation tho
 
 #:CALL D16rel, RegsBrace, IMM8		is op8=0xCD; D16rel; RegsBrace; IMM8		{ MDR = inst_next; *[ram]:4 SP = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D16rel; }
 #:CALL D32rel, RegsBrace, IMM8		is op8=0xDD; D32rel; RegsBrace; IMM8		{ MDR = inst_next; *[ram]:4 SP = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D32rel; }
-:CALL D16rel, RegsBrace, IMM8		is op8=0xCD; D16rel; RegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D16rel; }
-:CALL D32rel, RegsBrace, IMM8		is op8=0xDD; D32rel; RegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D32rel; }
+#:CALL D16rel, RegsBrace, IMM8		is op8=0xCD; D16rel; RegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D16rel; }
+#:CALL D32rel, RegsBrace, IMM8		is op8=0xDD; D32rel; RegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D32rel; }
+#:CALL D16rel, RegsBrace, IMM8		is op8=0xCD; D16rel; RegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D16rel; SP = SP + zext(IMM8); }
+#:CALL D32rel, RegsBrace, IMM8		is op8=0xDD; D32rel; RegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D32rel; SP = SP + zext(IMM8); }
+# does this work? lmao
+:CALL D16rel, RegsBrace, IMM8		is op8=0xCD; D16rel; RegsBrace & PopRegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D16rel; mult_addr = SP; build PopRegsBrace; SP = SP + zext(IMM8); }
+:CALL D32rel, RegsBrace, IMM8		is op8=0xDD; D32rel; RegsBrace & PopRegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D32rel; mult_addr = SP; build PopRegsBrace; SP = SP + zext(IMM8); }
 
-:CALLS (An0)		is op8=0xF0; op4=0xF & op2m=0 & An0		{ SP = SP - 4; *:4 SP = inst_next; MDR = inst_next; call [An0]; }
-:CALLS D16rel		is op8=0xFA; op8=0xFF; D16rel			{ SP = SP - 4; *:4 SP = inst_next; MDR = inst_next; call D16rel; }
-:CALLS D32rel		is op8=0xFC; op8=0xFF; D32rel			{ SP = SP - 4; *:4 SP = inst_next; MDR = inst_next; call D32rel; }
+#:CALLS (An0)		is op8=0xF0; op4=0xF & op2m=0 & An0		{ *:4 SP = inst_next; MDR = inst_next; call [An0]; }
+#:CALLS D16rel		is op8=0xFA; op8=0xFF; D16rel			{ *:4 SP = inst_next; MDR = inst_next; call D16rel; }
+#:CALLS D32rel		is op8=0xFC; op8=0xFF; D32rel			{ *:4 SP = inst_next; MDR = inst_next; call D32rel; }
+:CALLS (An0)		is op8=0xF0; op4=0xF & op2m=0 & An0		{ MDR = inst_next; call [An0]; }
+:CALLS D16rel		is op8=0xFA; op8=0xFF; D16rel			{ *:4 MDR = inst_next; call D16rel; }
+:CALLS D32rel		is op8=0xFC; op8=0xFF; D32rel			{ *:4 MDR = inst_next; call D32rel; }
 
 :RET PopRegsBrace, IMM8		is op8=0xDF; PopRegsBrace; IMM8	{ SP = SP + zext(IMM8); mult_addr=SP; build PopRegsBrace; PC = *SP; return [PC]; }
 :RETF PopRegsBrace, IMM8	is op8=0xDE; PopRegsBrace; IMM8	{ SP = SP + zext(IMM8); mult_addr=SP; build PopRegsBrace; PC = MDR; return [PC]; }
