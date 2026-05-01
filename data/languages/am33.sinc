@@ -309,7 +309,7 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 :LSR IMM24, Rn0 		is op8=0xfd; op8=0x59; Rn2 & Rn0 & op4=op4l; IMM24  	{ $(CF) = Rn0:1 & 1; Rn0 = Rn0 >> zext(IMM24); 	update_ZN_S32(Rn0); } # TODO: flags
 :LSR IMM32, Rn0 		is op8=0xfe; op8=0x59; Rn2 & Rn0 & op4=op4l; IMM32  	{ $(CF) = Rn0:1 & 1; Rn0 = Rn0 >> IMM32; 		update_ZN_S32(Rn0); } # TODO: flags
 
-:ASL Rm2, Rn0, Rd2		is op8=0xfb; op8=0x6d; Rm2 & Rn0; Rd2 & op4l=0  		{ mn_todo(); }
+:ASL Rm2, Rn0, Rd2		is op8=0xfb; op8=0x6d; Rm2 & Rn0; Rd2 & op4l=0  		{ Rd2 = Rn0 << (Rm2 & 0x1f); }
 :ASL Rm2, Rn0 			is op8=0xf9; op8=0x69; Rm2 & Rn0  						{ Rn0 = Rn0 << (Rm2 & 0x1f); }
 :ASL IMM8, Rn0 			is op8=0xfb; op8=0x69; Rn2 & Rn0 & op4=op4l; IMM8  		{ Rn0 = Rn0 << (IMM8 & 0x1f); }
 :ASL IMM24, Rn0 		is op8=0xfd; op8=0x69; Rn2 & Rn0 & op4=op4l; IMM24  	{ mn_todo(); }
@@ -338,6 +338,8 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 
 :FMOV IMM32, FLn0 		is op8=0xfe; op8=0x26; op4=0 & FLn0; IMM32  	{ FLn0 = IMM32; }
 :FMOV IMM32, FUn0 		is op8=0xfe; op8=0x27; op4=0 & FUn0; IMM32  	{ FUn0 = IMM32; }
+
+:FMUL IMM32, FLm2, FLn0 	is op8=0xfe; op4=7; FLm2 & FLn0; IMM32 { mn_todo(); } # TODO: the XY bit indicate upper or lower for float register bank. not sure how to do that
 
 # Is this defined in original?
 define pcodeop syscall;
