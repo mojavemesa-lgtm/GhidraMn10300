@@ -10,6 +10,8 @@ define register offset=0x20 size=4 [ MDR LIR LAR ];
 define register offset=0x30 size=4 [ PC SP  ]; 
 define register offset=0x50 size=2 [ PSW ]; # real size is 2, but am33 add epsw which is extended psw. is at same address or whatever so idk. could probably define it at same offset
 
+define register offset=0x60 size=4 [ MDRQ MCRH MCRL MCVF ]; 
+
 define register offset=0x80 size=4 [ mult_addr ];	# Special internal register for dealing with multiple stores/loads
 
 
@@ -172,7 +174,7 @@ attach variables [ Dn0 Dn1 Dn2  Dm0 Dm1 Dm2  Di0 Di1 Di2 ] [ D0 D1 D2 D3 ];
 
 # TODO: this is inverse? maybe its bottom up?
 PushRegsList8: "" 						is rEx2=0 					{ }
-PushRegsList8: "EX2" 					is rEx2=1 					{ mult_addr = mult_addr - 8; } # TODO: E0, E1
+PushRegsList8: "EX2" 					is rEx2=1 					{ mult_addr = mult_addr - 0x18; }  # TODO: E0, E1, MDRQ, MCRH MCRL MCVF
 PushRegsList7: PushRegsList8 			is PushRegsList8 & rEx1=0 	{ }
 PushRegsList7: "EX1" 					is rEx1=1 & r00=0 			{ mult_addr = mult_addr - 0x10; } # TODO: E4, E5, E6, E7
 PushRegsList7: "EX1",PushRegsList8 		is PushRegsList8 & rEx1=1 	{ mult_addr = mult_addr - 0x10; }
