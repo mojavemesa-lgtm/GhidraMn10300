@@ -52,6 +52,9 @@
     <symbol name="BCBERR" address="ram:0xC0002010" entry="true"/>
     <symbol name="BCBEAR" address="ram:0xC0002020" entry="true"/>
     
+    <symbol name="WDBC" address="ram:0xc4001000" entry="true"/>
+    <symbol name="WDBCTR" address="ram:0xc4001002" entry="true"/>
+    <symbol name="RSTCTR" address="ram:0xc4001004" entry="true"/>
     
 	<!--  theese dmas is probably cpu specific. MN103e010h specifies theese. while mn2ws0050 is 0xd4005000 and has some offsets based on core idx and register  -->
 	<!-- 
@@ -126,9 +129,6 @@
     <symbol name="IAGR" address="ram:0xd4000100" entry="true"/>
     <symbol name="EXTDM" address="ram:0xd4000200" entry="true"/>
 
-    <symbol name="WDBC" address="ram:0xd4001000" entry="true"/>
-    <symbol name="WDBCTR" address="ram:0xd4001002" entry="true"/>
-    <symbol name="RSTCTR" address="ram:0xd4001004" entry="true"/>
 
 
 
