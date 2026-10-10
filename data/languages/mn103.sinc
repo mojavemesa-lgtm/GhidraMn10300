@@ -12,7 +12,16 @@ define register offset=0x50 size=2 [ PSW ]; # real size is 2, but am33 add epsw 
 
 define register offset=0x60 size=4 [ MDRQ MCRH MCRL MCVF ]; 
 
-define register offset=0x80 size=4 [ mult_addr ];	# Special internal register for dealing with multiple stores/loads
+define register offset=0x80 size=4 [ mult_addr ];
+
+# Panasonic CALL d,[regs],imm allocates the CALLEE's frame at the call site. To give the decompiler
+# a fixed entry SP (return address at 0, stack args from 4), CALL no longer moves SP; instead the
+# callee's first instruction carries entryfix=1/fimm=frame (set per function by ghidra_scripts/SetEntryFrames.java).
+define register offset=0x300 size=4 [ contextreg ];
+define context contextreg
+  entryfix=(0,0) noflow
+  fimm=(8,15) noflow
+;	# Special internal register for dealing with multiple stores/loads
 
 
 define pcodeop mn_todo;
@@ -226,6 +235,57 @@ PopRegsList1: "EX2",PopRegsList2 		is PopRegsList2 & rEx2=1 	{ mult_addr = mult_
 RegsBrace: [PushRegsList1]	is PushRegsList1 	{ }
 PopRegsBrace: [PopRegsList1]	is PopRegsList1 	{ }
 
+# Display-only copies (no p-code): CALL/RET show their register list, but the saves/restores are not
+# modelled (cspec marks D2,D3,A2,A3 unaffected instead).
+PushRegsShow8: "" 						is rEx2=0 					{ }
+PushRegsShow8: "EX2" 					is rEx2=1 					{ }
+PushRegsShow7: PushRegsShow8 			is PushRegsShow8 & rEx1=0 	{ }
+PushRegsShow7: "EX1" 					is rEx1=1 & r00=0 			{ }
+PushRegsShow7: "EX1",PushRegsShow8 		is PushRegsShow8 & rEx1=1 	{ }
+PushRegsShow6: PushRegsShow7 			is PushRegsShow7 & rEx0=0 	{ }
+PushRegsShow6: "EX0" 					is rEx0=1 & r01=0 			{ }
+PushRegsShow6: "EX0",PushRegsShow7 		is PushRegsShow7 & rEx0=1 	{ }
+PushRegsShow5: PushRegsShow6 			is PushRegsShow6 & rOther=0 { }
+PushRegsShow5: "OTHER" 					is rOther=1 & r02=0 		{ }
+PushRegsShow5: "OTHER",PushRegsShow6 	is PushRegsShow6 & rOther=1 { }
+PushRegsShow4: PushRegsShow5 			is PushRegsShow5 & rA3=0 	{ }
+PushRegsShow4: "A3" 					is rA3=1 & r03=0 			{ }
+PushRegsShow4: "A3",PushRegsShow5 		is PushRegsShow5 & rA3=1 	{ }
+PushRegsShow3: PushRegsShow4 			is PushRegsShow4 & rA2=0	{ }
+PushRegsShow3: "A2" 					is rA2=1 & r04=0 			{ }
+PushRegsShow3: "A2",PushRegsShow4 		is PushRegsShow4 & rA2=1 	{ }
+PushRegsShow2: PushRegsShow3 			is PushRegsShow3 & rD3=0	{ }
+PushRegsShow2: "D3" 					is rD3=1 & r05=0 			{ }
+PushRegsShow2: "D3",PushRegsShow3 		is PushRegsShow3 & rD3=1 	{ }
+PushRegsShow1: PushRegsShow2 			is PushRegsShow2 & rD2=0 	{ }
+PushRegsShow1: "D2" 					is rD2=1 & r06=0 			{ }
+PushRegsShow1: "D2",PushRegsShow2 		is PushRegsShow2 & rD2=1 	{ }
+PopRegsShow8: "" 						is rD2=0 					{ }
+PopRegsShow8: "D2" 						is rD2=1 					{ }
+PopRegsShow7: PopRegsShow8 				is PopRegsShow8 & rD3=0 	{ }
+PopRegsShow7: "D3" 						is rD3=1 & r77=0 			{ }
+PopRegsShow7: "D3",PopRegsShow8 		is PopRegsShow8 & rD3=1 	{ }
+PopRegsShow6: PopRegsShow7 				is PopRegsShow7 & rA2=0 	{ }
+PopRegsShow6: "A2" 						is rA2=1 & r67=0 			{ }
+PopRegsShow6: "A2",PopRegsShow7 		is PopRegsShow7 & rA2=1 	{ }
+PopRegsShow5: PopRegsShow6 				is PopRegsShow6 & rA3=0 	{ }
+PopRegsShow5: "A3" 						is rA3=1 & r57=0 			{ }
+PopRegsShow5: "A3",PopRegsShow6 		is PopRegsShow6 & rA3=1 	{ }
+PopRegsShow4: PopRegsShow5 				is PopRegsShow5 & rOther=0 	{ }
+PopRegsShow4: "OTHER" 					is rOther=1 & r47=0 		{ }
+PopRegsShow4: "OTHER",PopRegsShow5 		is PopRegsShow5 & rOther=1 	{ }
+PopRegsShow3: PopRegsShow4 				is PopRegsShow4 & rEx0=0	{ }
+PopRegsShow3: "EX0" 					is rEx0=1 & r37=0 			{ }
+PopRegsShow3: "EX0",PopRegsShow4 		is PopRegsShow4 & rEx0=1 	{ }
+PopRegsShow2: PopRegsShow3 				is PopRegsShow3 & rEx1=0	{ }
+PopRegsShow2: "EX1" 					is rEx1=1 & r27=0 			{ }
+PopRegsShow2: "EX1",PopRegsShow3 		is PopRegsShow3 & rEx1=1 	{ }
+PopRegsShow1: PopRegsShow2 				is PopRegsShow2 & rEx2=0 	{ }
+PopRegsShow1: "EX2" 					is rEx2=1 & r17=0 			{ }
+PopRegsShow1: "EX2",PopRegsShow2 		is PopRegsShow2 & rEx2=1 	{ }
+RegsShow: [PushRegsShow1]	is PushRegsShow1 	{ }
+PopRegsShow: [PopRegsShow1]	is PopRegsShow1 	{ }
+
 IMM8:  imm8  is imm8  { local v:1 = imm8; export v; }
 IMM16: imm16 is imm16 { local v:2 = imm16; export v; }
 IMM24: imm24 is imm24 { local v:3 = imm24; export v; }
@@ -250,126 +310,126 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 
 # Data instructions
 
-:MOV "SP", An  			is op4=0x3 & op2m=3 & An            		{ An = SP; }
-:MOV (IMM16), Dn 		is op4=0x3 & op2m=0 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = *:4 addr; }
-:MOV (D8, "SP"), Dn 	is op4=0x5 & op2m=2 & Dn; D8  				{ Dn = *(SP + zext(D8)); }
-:MOV (D8, "SP"), An 	is op4=0x5 & op2m=3 & An; D8  				{ An = *(SP + zext(D8)); }
-:MOV (An), Dm 			is op4=0x7 & Dm & An  						{ Dm = *(An); }
-:MOV Dm1, Dn0    		is op4=0x8 & Dm1 & Dn0          			{ Dn0 = Dm1; }
-:MOV Am1, An0    		is op4=0x9 & Am1 & An0                		{ An0 = Am1; }
-:MOV (Am0), An1 		is op8=0xF0; op4=0 & An1 & Am0   			{ An1 = *(Am0); } 								# ???? confusing
-:MOV Am1, Dn0    		is op8=0xF1; op4=0xD & Am1 & Dn0      		{ Dn0 = Am1; }
-:MOV Dm1, An0    		is op8=0xF1; op4=0xE & Dm1 & An0    		{ An0 = Dm1; }
-:MOV "MDR", Dn0 		is op8=0xF2; op4=0xE & op2m=0 & Dn0 		{ Dn0 = MDR; }
-:MOV "PSW", Dn0 		is op8=0xF2; op4=0xe & op2m=1 & Dn0  		{ Dn0 = zext(PSW); }
-:MOV Am, "SP"  			is op8=0xF2; op4=0xf & Am & op2n=0  		{ SP = Am; }
-:MOV Dm1, "PSW" 		is op8=0xF2; op4=0xf & Dm1 & op2n=3  		{ PSW = Dm1:2; }
-:MOV Dm1, "MDR" 		is op8=0xF2; op4=0xF & Dm1 & op2n=2  		{ MDR = Dm1; }
-:MOV (Dm, An), Du 		is op8=0xF3; op2i=0 & Du & Dm & An  		{ Du = *(Dm + An); }
-:MOV (Dm, An), Au 		is op8=0xF3; op2i=2 & Au & Dm & An  		{ Au = *(Dm + An); }
-:MOV (D8 , An), Dm 		is op8=0xF8; op4=0 & Dm & An; D8  			{ Dm = *(An + sext(D8)); }
-:MOV (D8, An), Am 		is op8=0xF8; op4=2 & Am & An; D8  			{ Am = *(An + sext(D8)); }
-:MOV (D8, An), "SP" 	is op8=0xF8; op4=0xf & op2m=0 & An; D8  	{ An = *(SP + sext(D8)); }
-:MOV (D16, An), Dm 		is op8=0xFA; op4=0 & Dm & An; D16  			{ Dm = *(An + sext(D16)); }
-:MOV (D16, "SP"), An 	is op8=0xFA; op4=0xb & op2m=0 & An; D16 	{ An = *(SP + zext(D16)); }
-:MOV (D16, "SP"), Dn 	is op8=0xFA; op4=0xb & op2m=1 & Dn; D16 	{ Dn = *(SP + zext(D16)); }
-:MOV (D16, An), Am 		is op8=0xFA; op4=2 & Am & An; D16  			{ Am = *(An + sext(D16)); }
-:MOV (IMM16), An 		is op8=0xFA; op4=0xA & op2m=0 & An; IMM16 	{ local addr:4 = zext(IMM16); An = *:4 addr; }
-:MOV (D32, An), Dm 		is op8=0xFC; op4=0 & Dm & An; D32  			{ Dm = *(An + D32); }
-:MOV (D32, An), Am 		is op8=0xFC; op4=2 & Am & An; D32  			{ Am = *(An + sext(D32)); }
-:MOV (IMM32), An 		is op8=0xFC; op4=0xA & op2m=0 & An; IMM32 	{ An = *(IMM32); }
-:MOV (IMM32), Dn 		is op8=0xFC; op4=0xa & op2m=1 & Dn; IMM32 	{ Dn = *(IMM32); }
-:MOV (D32, "SP"), An 	is op8=0xFC; op4=0xb & op2m=0 & An; D32 	{ An = *(SP + zext(D32)); }
-:MOV (D32, "SP"), Dn 	is op8=0xFC; op4=0xb & op2m=1 & Dn; D32 	{ Dn = *(SP + zext(D32)); }
+:MOV "SP", An  			is entryfix=0 & op4=0x3 & op2m=3 & An            		{ An = SP; }
+:MOV (IMM16), Dn 		is entryfix=0 & op4=0x3 & op2m=0 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = *:4 addr; }
+:MOV (D8, "SP"), Dn 	is entryfix=0 & op4=0x5 & op2m=2 & Dn; D8  				{ Dn = *(SP + zext(D8)); }
+:MOV (D8, "SP"), An 	is entryfix=0 & op4=0x5 & op2m=3 & An; D8  				{ An = *(SP + zext(D8)); }
+:MOV (An), Dm 			is entryfix=0 & op4=0x7 & Dm & An  						{ Dm = *(An); }
+:MOV Dm1, Dn0    		is entryfix=0 & op4=0x8 & Dm1 & Dn0          			{ Dn0 = Dm1; }
+:MOV Am1, An0    		is entryfix=0 & op4=0x9 & Am1 & An0                		{ An0 = Am1; }
+:MOV (Am0), An1 		is entryfix=0 & op8=0xF0; op4=0 & An1 & Am0   			{ An1 = *(Am0); } 								# ???? confusing
+:MOV Am1, Dn0    		is entryfix=0 & op8=0xF1; op4=0xD & Am1 & Dn0      		{ Dn0 = Am1; }
+:MOV Dm1, An0    		is entryfix=0 & op8=0xF1; op4=0xE & Dm1 & An0    		{ An0 = Dm1; }
+:MOV "MDR", Dn0 		is entryfix=0 & op8=0xF2; op4=0xE & op2m=0 & Dn0 		{ Dn0 = MDR; }
+:MOV "PSW", Dn0 		is entryfix=0 & op8=0xF2; op4=0xe & op2m=1 & Dn0  		{ Dn0 = zext(PSW); }
+:MOV Am, "SP"  			is entryfix=0 & op8=0xF2; op4=0xf & Am & op2n=0  		{ SP = Am; }
+:MOV Dm1, "PSW" 		is entryfix=0 & op8=0xF2; op4=0xf & Dm1 & op2n=3  		{ PSW = Dm1:2; }
+:MOV Dm1, "MDR" 		is entryfix=0 & op8=0xF2; op4=0xF & Dm1 & op2n=2  		{ MDR = Dm1; }
+:MOV (Dm, An), Du 		is entryfix=0 & op8=0xF3; op2i=0 & Du & Dm & An  		{ Du = *(Dm + An); }
+:MOV (Dm, An), Au 		is entryfix=0 & op8=0xF3; op2i=2 & Au & Dm & An  		{ Au = *(Dm + An); }
+:MOV (D8 , An), Dm 		is entryfix=0 & op8=0xF8; op4=0 & Dm & An; D8  			{ Dm = *(An + sext(D8)); }
+:MOV (D8, An), Am 		is entryfix=0 & op8=0xF8; op4=2 & Am & An; D8  			{ Am = *(An + sext(D8)); }
+:MOV (D8, An), "SP" 	is entryfix=0 & op8=0xF8; op4=0xf & op2m=0 & An; D8  	{ An = *(SP + sext(D8)); }
+:MOV (D16, An), Dm 		is entryfix=0 & op8=0xFA; op4=0 & Dm & An; D16  			{ Dm = *(An + sext(D16)); }
+:MOV (D16, "SP"), An 	is entryfix=0 & op8=0xFA; op4=0xb & op2m=0 & An; D16 	{ An = *(SP + zext(D16)); }
+:MOV (D16, "SP"), Dn 	is entryfix=0 & op8=0xFA; op4=0xb & op2m=1 & Dn; D16 	{ Dn = *(SP + zext(D16)); }
+:MOV (D16, An), Am 		is entryfix=0 & op8=0xFA; op4=2 & Am & An; D16  			{ Am = *(An + sext(D16)); }
+:MOV (IMM16), An 		is entryfix=0 & op8=0xFA; op4=0xA & op2m=0 & An; IMM16 	{ local addr:4 = zext(IMM16); An = *:4 addr; }
+:MOV (D32, An), Dm 		is entryfix=0 & op8=0xFC; op4=0 & Dm & An; D32  			{ Dm = *(An + D32); }
+:MOV (D32, An), Am 		is entryfix=0 & op8=0xFC; op4=2 & Am & An; D32  			{ Am = *(An + sext(D32)); }
+:MOV (IMM32), An 		is entryfix=0 & op8=0xFC; op4=0xA & op2m=0 & An; IMM32 	{ An = *(IMM32); }
+:MOV (IMM32), Dn 		is entryfix=0 & op8=0xFC; op4=0xa & op2m=1 & Dn; IMM32 	{ Dn = *(IMM32); }
+:MOV (D32, "SP"), An 	is entryfix=0 & op8=0xFC; op4=0xb & op2m=0 & An; D32 	{ An = *(SP + zext(D32)); }
+:MOV (D32, "SP"), Dn 	is entryfix=0 & op8=0xFC; op4=0xb & op2m=1 & Dn; D32 	{ Dn = *(SP + zext(D32)); }
 
-:MOV Dm, (IMM16) 		is op4=0x0 & Dm & op2n=1; IMM16 			{ local addr:4 = zext(IMM16); *:4 addr = Dm; }
-:MOV Dm, (D8, "SP") 	is op4=0x4 & Dm & op2n=2; D8  				{ *(SP + zext(D8)) = Dm; }
-:MOV Am, (D8, "SP") 	is op4=0x4 & Am & op2n=3; D8  				{ *(SP + zext(D8)) = Am; }
-:MOV Dm, (An) 			is op4=0x6 & Dm & An  						{ *(An) = Dm; }
-:MOV Am, (An) 			is op8=0xF0; op4=1 & Am & An  				{ *(An) = Am; }
-:MOV Du, (Dm, An) 		is op8=0xF3; op2i=1 & Du & Dm & An  		{ *(Dm + An) = Du; }
-:MOV Au, (Dm, An) 		is op8=0xF3; op2i=3 & Au & Dm & An  		{ *(Dm + An) = Au; }
-:MOV Dm, (D8 , An) 		is op8=0xF8; op4=1 & Dm & An; D8  			{ *(An + sext(D8)) = Dm; }
-:MOV Am, (D8, An) 		is op8=0xF8; op4=3 & Am & An; D8  			{ *(An + sext(D8)) = Am; }
-:MOV "SP", (D8, An) 	is op8=0xF8; op4=0xf & op2m=1 & An; D8  	{ *(SP + sext(D8)) = SP; }
-:MOV Dm, (D16, An) 		is op8=0xFA; op4=1 & Dm & An; D16  			{ *(An + sext(D16)) = Dm; }
-:MOV Am, (D16, An) 		is op8=0xFA; op4=3 & Am & An; D16  			{ *(An + sext(D16)) = Am; }
-:MOV Am, (IMM16) 		is op8=0xFA; op4=8 & Am & op2n=0; IMM16 	{ local addr:4 = zext(IMM16); *addr = Am; }
-:MOV Am, (D16, "SP") 	is op8=0xFA; op4=9 & Am & op2n=0; D16 		{ *(SP + zext(D16)) = Am; }
-:MOV Dm, (D16, "SP") 	is op8=0xFA; op4=9 & Dm & op2n=1; D16 		{ *(SP + zext(D16)) = Dm; }
-:MOV Dm, (D32, An) 		is op8=0xFC; op4=1 & Dm & An; D32  			{ *(An + D32) = Dm; }
-:MOV Am, (D32, An) 		is op8=0xFC; op4=3 & Am & An; D32  			{ *(An + sext(D32)) = Am; }
-:MOV Am, (IMM32) 		is op8=0xFC; op4=8 & Am & op2n=0; IMM32 	{ *(IMM32) = Am; }
-:MOV Dm, (IMM32) 		is op8=0xFC; op4=8 & Dm & op2n=1; IMM32 	{ *(IMM32) = Dm; }
-:MOV Am, (D32, "SP") 	is op8=0xFC; op4=9 & Am & op2n=0; D32 		{ *(SP + zext(D32)) = Am; }
-:MOV Dm, (D32, "SP") 	is op8=0xFC; op4=9 & Dm & op2n=1; D32 		{ *(SP + zext(D32)) = Dm; }
+:MOV Dm, (IMM16) 		is entryfix=0 & op4=0x0 & Dm & op2n=1; IMM16 			{ local addr:4 = zext(IMM16); *:4 addr = Dm; }
+:MOV Dm, (D8, "SP") 	is entryfix=0 & op4=0x4 & Dm & op2n=2; D8  				{ *(SP + zext(D8)) = Dm; }
+:MOV Am, (D8, "SP") 	is entryfix=0 & op4=0x4 & Am & op2n=3; D8  				{ *(SP + zext(D8)) = Am; }
+:MOV Dm, (An) 			is entryfix=0 & op4=0x6 & Dm & An  						{ *(An) = Dm; }
+:MOV Am, (An) 			is entryfix=0 & op8=0xF0; op4=1 & Am & An  				{ *(An) = Am; }
+:MOV Du, (Dm, An) 		is entryfix=0 & op8=0xF3; op2i=1 & Du & Dm & An  		{ *(Dm + An) = Du; }
+:MOV Au, (Dm, An) 		is entryfix=0 & op8=0xF3; op2i=3 & Au & Dm & An  		{ *(Dm + An) = Au; }
+:MOV Dm, (D8 , An) 		is entryfix=0 & op8=0xF8; op4=1 & Dm & An; D8  			{ *(An + sext(D8)) = Dm; }
+:MOV Am, (D8, An) 		is entryfix=0 & op8=0xF8; op4=3 & Am & An; D8  			{ *(An + sext(D8)) = Am; }
+:MOV "SP", (D8, An) 	is entryfix=0 & op8=0xF8; op4=0xf & op2m=1 & An; D8  	{ *(SP + sext(D8)) = SP; }
+:MOV Dm, (D16, An) 		is entryfix=0 & op8=0xFA; op4=1 & Dm & An; D16  			{ *(An + sext(D16)) = Dm; }
+:MOV Am, (D16, An) 		is entryfix=0 & op8=0xFA; op4=3 & Am & An; D16  			{ *(An + sext(D16)) = Am; }
+:MOV Am, (IMM16) 		is entryfix=0 & op8=0xFA; op4=8 & Am & op2n=0; IMM16 	{ local addr:4 = zext(IMM16); *addr = Am; }
+:MOV Am, (D16, "SP") 	is entryfix=0 & op8=0xFA; op4=9 & Am & op2n=0; D16 		{ *(SP + zext(D16)) = Am; }
+:MOV Dm, (D16, "SP") 	is entryfix=0 & op8=0xFA; op4=9 & Dm & op2n=1; D16 		{ *(SP + zext(D16)) = Dm; }
+:MOV Dm, (D32, An) 		is entryfix=0 & op8=0xFC; op4=1 & Dm & An; D32  			{ *(An + D32) = Dm; }
+:MOV Am, (D32, An) 		is entryfix=0 & op8=0xFC; op4=3 & Am & An; D32  			{ *(An + sext(D32)) = Am; }
+:MOV Am, (IMM32) 		is entryfix=0 & op8=0xFC; op4=8 & Am & op2n=0; IMM32 	{ *(IMM32) = Am; }
+:MOV Dm, (IMM32) 		is entryfix=0 & op8=0xFC; op4=8 & Dm & op2n=1; IMM32 	{ *(IMM32) = Dm; }
+:MOV Am, (D32, "SP") 	is entryfix=0 & op8=0xFC; op4=9 & Am & op2n=0; D32 		{ *(SP + zext(D32)) = Am; }
+:MOV Dm, (D32, "SP") 	is entryfix=0 & op8=0xFC; op4=9 & Dm & op2n=1; D32 		{ *(SP + zext(D32)) = Dm; }
 
-:MOV IMM16, An 		is op4=0x2 & op2m=1 & An; IMM16 			{ An = sext(IMM16); }
-:MOV IMM16, Dn 		is op4=0x2 & op2m=3 & Dn; IMM16 			{ Dn = sext(IMM16); }
-:MOV IMM8, Dn0 		is op4=0x8 & Dn0 & Dn1 & reg0=reg1; IMM8 	{ Dn0 = sext(IMM8); }
-:MOV IMM8, An0 		is op4=0x9 & An0 & An1 & reg0=reg1; IMM8 	{ An0 = sext(IMM8); }
-:MOV IMM32, Dn 		is op8=0xFC; op4=0xc & op2m=3 & Dn; IMM32 	{ Dn = sext(IMM32); }
-:MOV IMM32, An 		is op8=0xFC; op4=0xd & op2m=3 & An; IMM32 	{ An = sext(IMM32); }
+:MOV IMM16, An 		is entryfix=0 & op4=0x2 & op2m=1 & An; IMM16 			{ An = sext(IMM16); }
+:MOV IMM16, Dn 		is entryfix=0 & op4=0x2 & op2m=3 & Dn; IMM16 			{ Dn = sext(IMM16); }
+:MOV IMM8, Dn0 		is entryfix=0 & op4=0x8 & Dn0 & Dn1 & reg0=reg1; IMM8 	{ Dn0 = sext(IMM8); }
+:MOV IMM8, An0 		is entryfix=0 & op4=0x9 & An0 & An1 & reg0=reg1; IMM8 	{ An0 = sext(IMM8); }
+:MOV IMM32, Dn 		is entryfix=0 & op8=0xFC; op4=0xc & op2m=3 & Dn; IMM32 	{ Dn = sext(IMM32); }
+:MOV IMM32, An 		is entryfix=0 & op8=0xFC; op4=0xd & op2m=3 & An; IMM32 	{ An = sext(IMM32); }
 
 
 
-:MOVBU (IMM16), Dn 		is op4=0x3 & op2m=1 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = zext(*:1 addr); }
-:MOVBU (An), Dm 		is op8=0xf0; op4=0x4 & Dm & An  			{ Dm = zext(*:1 An); }
-:MOVBU (Dm, An), Du 	is op8=0xf4; op2i=0 & Du & Dm & An  		{ Du = zext(*:1 (Dm + An)); }
-:MOVBU (D8 , An), Dm 	is op8=0xf8; op4=0x4 & Dm & An; D8  		{ Dm = zext(*:1 (An + sext(D8))); }
-:MOVBU (D8 , "SP"), Dn 	is op8=0xf8; op4=0xb & op2m=2 & Dn; D8  	{ Dn = zext(*:1 (SP + sext(D8))); }
-:MOVBU (D16, An), Dm 	is op8=0xfa; op4=0x4 & Dm & An; D16  		{ Dm = zext(*:1 (An + sext(D16))); }
-:MOVBU (D16, "SP"), Dn 	is op8=0xfa; op4=0xb & op2m=2 & Dn; D16  	{ Dn = zext(*:1 (SP + sext(D16))); }
-:MOVBU (D32, An), Dm 	is op8=0xfc; op4=0x4 & Dm & An; D32  		{ Dm = zext(*:1 (An + D32)); }
-:MOVBU (IMM32), Dn 		is op8=0xfc; op4=0xa & op2m=2 & Dn; IMM32 	{ Dn = zext(*:1 IMM32); }
-:MOVBU (D32, "SP"), Dn 	is op8=0xfc; op4=0xb & op2m=2 & Dn; D32  	{ Dn = zext(*:1 (SP + D32)); }
+:MOVBU (IMM16), Dn 		is entryfix=0 & op4=0x3 & op2m=1 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = zext(*:1 addr); }
+:MOVBU (An), Dm 		is entryfix=0 & op8=0xf0; op4=0x4 & Dm & An  			{ Dm = zext(*:1 An); }
+:MOVBU (Dm, An), Du 	is entryfix=0 & op8=0xf4; op2i=0 & Du & Dm & An  		{ Du = zext(*:1 (Dm + An)); }
+:MOVBU (D8 , An), Dm 	is entryfix=0 & op8=0xf8; op4=0x4 & Dm & An; D8  		{ Dm = zext(*:1 (An + sext(D8))); }
+:MOVBU (D8 , "SP"), Dn 	is entryfix=0 & op8=0xf8; op4=0xb & op2m=2 & Dn; D8  	{ Dn = zext(*:1 (SP + sext(D8))); }
+:MOVBU (D16, An), Dm 	is entryfix=0 & op8=0xfa; op4=0x4 & Dm & An; D16  		{ Dm = zext(*:1 (An + sext(D16))); }
+:MOVBU (D16, "SP"), Dn 	is entryfix=0 & op8=0xfa; op4=0xb & op2m=2 & Dn; D16  	{ Dn = zext(*:1 (SP + sext(D16))); }
+:MOVBU (D32, An), Dm 	is entryfix=0 & op8=0xfc; op4=0x4 & Dm & An; D32  		{ Dm = zext(*:1 (An + D32)); }
+:MOVBU (IMM32), Dn 		is entryfix=0 & op8=0xfc; op4=0xa & op2m=2 & Dn; IMM32 	{ Dn = zext(*:1 IMM32); }
+:MOVBU (D32, "SP"), Dn 	is entryfix=0 & op8=0xfc; op4=0xb & op2m=2 & Dn; D32  	{ Dn = zext(*:1 (SP + D32)); }
 
-:MOVBU Dm, (IMM16) 		is op4=0x0 & Dm & op2n=2; IMM16 			{ local addr:4 = zext(IMM16); *:1 addr = Dm:1; }
-:MOVBU Dm, (An) 		is op8=0xf0; op4=0x5 & Dm & An  			{ *:1 An = Dm:1; }
-:MOVBU Du, (Dm, An) 	is op8=0xf4; op2i=1 & Du & Dm & An  		{ *:1 (Dm + An) = Du:1; }
-:MOVBU Dm, (D8 , An) 	is op8=0xf8; op4=0x5 & Dm & An; D8  		{ *:1 (An + sext(D8)) = Dm:1; }
-:MOVBU Dm, (D8 , "SP") 	is op8=0xf8; op4=0x9 & Dm & op2n=2; D8  	{ *:1 (SP + zext(D8)) = Dm:1; }
-:MOVBU Dm, (D16, An) 	is op8=0xfa; op4=0x5 & Dm & An; D16  		{ *:1 (An + sext(D16)) = Dm:1; }
-:MOVBU Dm, (D16, "SP") 	is op8=0xfa; op4=0x9 & Dm & op2n=2; D16  	{ *:1 (SP + zext(D16)) = Dm:1; }
-:MOVBU Dm, (D32, An) 	is op8=0xfc; op4=0x5 & Dm & An; D32  		{ *:1 (An + D32) = Dm:1; }
-:MOVBU Dm, (IMM32) 		is op8=0xfc; op4=0x8 & Dm & op2n=2; IMM32 	{ *:1 IMM32 = Dm:1; }
-:MOVBU Dm, (D32, "SP") 	is op8=0xfc; op4=0x9 & Dm & op2n=2; D32  	{ *:1 (SP + D32) = Dm:1; }
+:MOVBU Dm, (IMM16) 		is entryfix=0 & op4=0x0 & Dm & op2n=2; IMM16 			{ local addr:4 = zext(IMM16); *:1 addr = Dm:1; }
+:MOVBU Dm, (An) 		is entryfix=0 & op8=0xf0; op4=0x5 & Dm & An  			{ *:1 An = Dm:1; }
+:MOVBU Du, (Dm, An) 	is entryfix=0 & op8=0xf4; op2i=1 & Du & Dm & An  		{ *:1 (Dm + An) = Du:1; }
+:MOVBU Dm, (D8 , An) 	is entryfix=0 & op8=0xf8; op4=0x5 & Dm & An; D8  		{ *:1 (An + sext(D8)) = Dm:1; }
+:MOVBU Dm, (D8 , "SP") 	is entryfix=0 & op8=0xf8; op4=0x9 & Dm & op2n=2; D8  	{ *:1 (SP + zext(D8)) = Dm:1; }
+:MOVBU Dm, (D16, An) 	is entryfix=0 & op8=0xfa; op4=0x5 & Dm & An; D16  		{ *:1 (An + sext(D16)) = Dm:1; }
+:MOVBU Dm, (D16, "SP") 	is entryfix=0 & op8=0xfa; op4=0x9 & Dm & op2n=2; D16  	{ *:1 (SP + zext(D16)) = Dm:1; }
+:MOVBU Dm, (D32, An) 	is entryfix=0 & op8=0xfc; op4=0x5 & Dm & An; D32  		{ *:1 (An + D32) = Dm:1; }
+:MOVBU Dm, (IMM32) 		is entryfix=0 & op8=0xfc; op4=0x8 & Dm & op2n=2; IMM32 	{ *:1 IMM32 = Dm:1; }
+:MOVBU Dm, (D32, "SP") 	is entryfix=0 & op8=0xfc; op4=0x9 & Dm & op2n=2; D32  	{ *:1 (SP + D32) = Dm:1; }
 
 # TODO: Movb. doesnt have bits in table
 
 
-:MOVHU (An), Dm 		is op8=0xf0; op4=0x6 & Dm & An  			{ Dm = zext(*:2 An); }
-:MOVHU (D8 , An), Dm 	is op8=0xf8; op4=0x6 & Dm & An; D8  		{ Dm = zext(*:2 (An + sext(D8))); }
-:MOVHU (D16, An), Dm 	is op8=0xfa; op4=0x6 & Dm & An; D16  		{ Dm = zext(*:2 (An + sext(D16))); }
-:MOVHU (D32, An), Dm 	is op8=0xfc; op4=0x6 & Dm & An; D32  		{ Dm = zext(*:2 (An + D32)); }
-:MOVHU (D8 , "SP"), Dn 	is op8=0xf8; op4=0xb & op2m=3 & Dn; D8  	{ Dn = zext(*:2 (SP + sext(D8))); }
-:MOVHU (D16, "SP"), Dn 	is op8=0xfa; op4=0xb & op2m=3 & Dn; D16  	{ Dn = zext(*:2 (SP + sext(D16))); }
-:MOVHU (D32, "SP"), Dn 	is op8=0xfc; op4=0xb & op2m=3 & Dn; D32  	{ Dn = zext(*:2 (SP + D32)); }
-:MOVHU (Dm, An), Du 	is op8=0xf4; op2i=2 & Du & Dm & An  		{ Du = zext(*:2 (Dm + An)); }
-:MOVHU (IMM16), Dn 		is op4=0x3 & op2m=2 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = zext(*:2 addr); }
-:MOVHU (IMM32), Dn 		is op8=0xFC; op4=0xa & op2m=3 & Dn; IMM32 	{ Dn = zext(*:2 IMM32); }
+:MOVHU (An), Dm 		is entryfix=0 & op8=0xf0; op4=0x6 & Dm & An  			{ Dm = zext(*:2 An); }
+:MOVHU (D8 , An), Dm 	is entryfix=0 & op8=0xf8; op4=0x6 & Dm & An; D8  		{ Dm = zext(*:2 (An + sext(D8))); }
+:MOVHU (D16, An), Dm 	is entryfix=0 & op8=0xfa; op4=0x6 & Dm & An; D16  		{ Dm = zext(*:2 (An + sext(D16))); }
+:MOVHU (D32, An), Dm 	is entryfix=0 & op8=0xfc; op4=0x6 & Dm & An; D32  		{ Dm = zext(*:2 (An + D32)); }
+:MOVHU (D8 , "SP"), Dn 	is entryfix=0 & op8=0xf8; op4=0xb & op2m=3 & Dn; D8  	{ Dn = zext(*:2 (SP + sext(D8))); }
+:MOVHU (D16, "SP"), Dn 	is entryfix=0 & op8=0xfa; op4=0xb & op2m=3 & Dn; D16  	{ Dn = zext(*:2 (SP + sext(D16))); }
+:MOVHU (D32, "SP"), Dn 	is entryfix=0 & op8=0xfc; op4=0xb & op2m=3 & Dn; D32  	{ Dn = zext(*:2 (SP + D32)); }
+:MOVHU (Dm, An), Du 	is entryfix=0 & op8=0xf4; op2i=2 & Du & Dm & An  		{ Du = zext(*:2 (Dm + An)); }
+:MOVHU (IMM16), Dn 		is entryfix=0 & op4=0x3 & op2m=2 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = zext(*:2 addr); }
+:MOVHU (IMM32), Dn 		is entryfix=0 & op8=0xFC; op4=0xa & op2m=3 & Dn; IMM32 	{ Dn = zext(*:2 IMM32); }
 
-:MOVHU Dm, (An) 		is op8=0xf0; op4=0x7 & Dm & An  			{ *:2 An = Dm:2; }
-:MOVHU Dm, (D8 , An) 	is op8=0xf8; op4=0x7 & Dm & An; D8  		{ *:2 (An + sext(D8)) = Dm:2; } # TODO: probably error in document.
-:MOVHU Dm, (D16, An) 	is op8=0xfa; op4=0x7 & Dm & An; D16  		{ *:2 (An + sext(D16)) = Dm:2; }
-:MOVHU Dm, (D32, An) 	is op8=0xfc; op4=0x7 & Dm & An; D32  		{ *:2 (An + D32) = Dm:2; }
-:MOVHU Dm, (D8 , "SP") 	is op8=0xf8; op4=0x9 & Dm & op2n=3; D8  	{ *:2 (SP + zext(D8)) = Dm:2; }
-:MOVHU Dm, (D16, "SP") 	is op8=0xfa; op4=0x9 & Dm & op2n=3; D16  	{ *:2 (SP + zext(D16)) = Dm:2; }
-:MOVHU Dm, (D32, "SP") 	is op8=0xfc; op4=0x9 & Dm & op2n=3; D32  	{ *:2 (SP + D32) = Dm:2; }
-:MOVHU Du, (Dm, An) 	is op8=0xf4; op2i=3 & Du & Dm & An  		{ *:2 (Dm + An) = Du:2; }
-:MOVHU Dm, (IMM16) 		is op4=0x0 & Dm & op2n=3; IMM16 			{ local addr:4 = zext(IMM16); *:2 addr = Dm:2; }
-:MOVHU Dm, (IMM32) 		is op8=0xFC; op4=0x8 & Dm & op2n=3; IMM32 	{ *:2 IMM32 = Dm:2; }
+:MOVHU Dm, (An) 		is entryfix=0 & op8=0xf0; op4=0x7 & Dm & An  			{ *:2 An = Dm:2; }
+:MOVHU Dm, (D8 , An) 	is entryfix=0 & op8=0xf8; op4=0x7 & Dm & An; D8  		{ *:2 (An + sext(D8)) = Dm:2; } # TODO: probably error in document.
+:MOVHU Dm, (D16, An) 	is entryfix=0 & op8=0xfa; op4=0x7 & Dm & An; D16  		{ *:2 (An + sext(D16)) = Dm:2; }
+:MOVHU Dm, (D32, An) 	is entryfix=0 & op8=0xfc; op4=0x7 & Dm & An; D32  		{ *:2 (An + D32) = Dm:2; }
+:MOVHU Dm, (D8 , "SP") 	is entryfix=0 & op8=0xf8; op4=0x9 & Dm & op2n=3; D8  	{ *:2 (SP + zext(D8)) = Dm:2; }
+:MOVHU Dm, (D16, "SP") 	is entryfix=0 & op8=0xfa; op4=0x9 & Dm & op2n=3; D16  	{ *:2 (SP + zext(D16)) = Dm:2; }
+:MOVHU Dm, (D32, "SP") 	is entryfix=0 & op8=0xfc; op4=0x9 & Dm & op2n=3; D32  	{ *:2 (SP + D32) = Dm:2; }
+:MOVHU Du, (Dm, An) 	is entryfix=0 & op8=0xf4; op2i=3 & Du & Dm & An  		{ *:2 (Dm + An) = Du:2; }
+:MOVHU Dm, (IMM16) 		is entryfix=0 & op4=0x0 & Dm & op2n=3; IMM16 			{ local addr:4 = zext(IMM16); *:2 addr = Dm:2; }
+:MOVHU Dm, (IMM32) 		is entryfix=0 & op8=0xFC; op4=0x8 & Dm & op2n=3; IMM32 	{ *:2 IMM32 = Dm:2; }
 
-:MOVM ("SP"), PopRegsBrace 	is op8=0xce; PopRegsBrace  			{ mult_addr = SP; build PopRegsBrace; SP = mult_addr; }
-:MOVM RegsBrace, ("SP") 	is op8=0xcf; RegsBrace  			{ mult_addr = SP; build RegsBrace; SP = mult_addr; }
+:MOVM ("SP"), PopRegsBrace 	is entryfix=0 & op8=0xce; PopRegsBrace  			{ mult_addr = SP; build PopRegsBrace; SP = mult_addr; }
+:MOVM RegsBrace, ("SP") 	is entryfix=0 & op8=0xcf; RegsBrace  			{ mult_addr = SP; build RegsBrace; SP = mult_addr; }
 
-:EXT Dn0 		is op8=0xF2; op4=0xd & op2m=0 & Dn0 	{ MDR = Dn0 s>> 31; }
-:EXTB Dn0 		is op4=0x1 & op2m=0 & Dn0 	{ local sign:4 = Dn0 s>> 31; MDR = (Dn0 & (sign & 0xFFFFFF00)) & (sign | 0x000000FF); }
-:EXTBU Dn0 		is op4=0x1 & op2m=1 & Dn0 	{ Dn0 = zext(Dn0:1); }
-:EXTH Dn0 		is op4=0x1 & op2m=2 & Dn0 	{ local sign:4 = Dn0 s>> 31; Dn0 = (Dn0 & (sign & 0xFFFF0000)) & (sign | 0x0000FFFF); }
-:EXTHU Dn0 		is op4=0x1 & op2m=3 & Dn0 	{ Dn0 = zext(Dn0:2); }
+:EXT Dn0 		is entryfix=0 & op8=0xF2; op4=0xd & op2m=0 & Dn0 	{ MDR = Dn0 s>> 31; }
+:EXTB Dn0 		is entryfix=0 & op4=0x1 & op2m=0 & Dn0 	{ local sign:4 = Dn0 s>> 31; MDR = (Dn0 & (sign & 0xFFFFFF00)) & (sign | 0x000000FF); }
+:EXTBU Dn0 		is entryfix=0 & op4=0x1 & op2m=1 & Dn0 	{ Dn0 = zext(Dn0:1); }
+:EXTH Dn0 		is entryfix=0 & op4=0x1 & op2m=2 & Dn0 	{ local sign:4 = Dn0 s>> 31; Dn0 = (Dn0 & (sign & 0xFFFF0000)) & (sign | 0x0000FFFF); }
+:EXTHU Dn0 		is entryfix=0 & op4=0x1 & op2m=3 & Dn0 	{ Dn0 = zext(Dn0:2); }
 
-:CLR Dn1 		is op4=0x0 & Dn1 & op2n=0 	{ Dn1 = 0; }
+:CLR Dn1 		is entryfix=0 & op4=0x0 & Dn1 & op2n=0 	{ Dn1 = 0; }
 
 # Arithmetic calculation instructions
 
@@ -403,34 +463,34 @@ macro update_sub(a, b) {
 }
 
 
-:ADD Dm1, Dn0 		is op4=0xE & Dm1 & Dn0 							{ update_add(Dn0, Dm1); }
-:ADD Am1, Dn0 		is op8=0xF1; op4=0x5 & Am1 & Dn0 				{ update_add(Dn0, Am1); } # Panasonic manual sucks ass. 
-:ADD Dm1, An0 		is op8=0xF1; op4=0x6 & Dm1 & An0 				{ update_add(An0, Dm1); }
-:ADD Am1, An0 		is op8=0xF1; op4=0x7 & Am1 & An0 				{ update_add(An0, Am1); }
-:ADD SIMM8, Dn0 	is op4=0x2 & op2m=2 & Dn0; SIMM8				{ update_add(Dn0, sext(SIMM8)); }
-:ADD SIMM16, Dn0 	is op8=0xFA; op4=0xc & op2m=0 & Dn0; SIMM16 	{ update_add(Dn0, sext(SIMM16)); }
-:ADD SIMM32, Dn0 	is op8=0xFc; op4=0xc & op2m=0 & Dn0; SIMM32 	{ update_add(Dn0, SIMM32); }
-:ADD SIMM8, An0 	is op4=0x2 & op2m=0 & An0; SIMM8				{ update_add(An0, sext(SIMM8)); }
-:ADD SIMM16, An0 	is op8=0xFA; op4=0xd & op2m=0 & An0; SIMM16 	{ update_add(An0, sext(SIMM16)); }
-:ADD SIMM32, An0 	is op8=0xFc; op4=0xd & op2m=0 & An0; SIMM32 	{ update_add(An0, SIMM32); }
-:ADD SIMM8, "SP" 	is op8=0xF8; op8=0xFE; SIMM8					{ update_add(SP, sext(SIMM8)); }
-:ADD SIMM16, "SP" 	is op8=0xFA; op8=0xFE; SIMM16 					{ update_add(SP, sext(SIMM16)); }
-:ADD SIMM32, "SP" 	is op8=0xFC; op8=0xFE; SIMM32 					{ update_add(SP, SIMM32); }
-:ADDC Dm1, Dn0 		is op8=0xF1; op4=0x4 & Dm1 & Dn0 				{ update_add(Dn0, Dm1 + zext($(CF))); }
+:ADD Dm1, Dn0 		is entryfix=0 & op4=0xE & Dm1 & Dn0 							{ update_add(Dn0, Dm1); }
+:ADD Am1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x5 & Am1 & Dn0 				{ update_add(Dn0, Am1); } # Panasonic manual sucks ass. 
+:ADD Dm1, An0 		is entryfix=0 & op8=0xF1; op4=0x6 & Dm1 & An0 				{ update_add(An0, Dm1); }
+:ADD Am1, An0 		is entryfix=0 & op8=0xF1; op4=0x7 & Am1 & An0 				{ update_add(An0, Am1); }
+:ADD SIMM8, Dn0 	is entryfix=0 & op4=0x2 & op2m=2 & Dn0; SIMM8				{ update_add(Dn0, sext(SIMM8)); }
+:ADD SIMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xc & op2m=0 & Dn0; SIMM16 	{ update_add(Dn0, sext(SIMM16)); }
+:ADD SIMM32, Dn0 	is entryfix=0 & op8=0xFc; op4=0xc & op2m=0 & Dn0; SIMM32 	{ update_add(Dn0, SIMM32); }
+:ADD SIMM8, An0 	is entryfix=0 & op4=0x2 & op2m=0 & An0; SIMM8				{ update_add(An0, sext(SIMM8)); }
+:ADD SIMM16, An0 	is entryfix=0 & op8=0xFA; op4=0xd & op2m=0 & An0; SIMM16 	{ update_add(An0, sext(SIMM16)); }
+:ADD SIMM32, An0 	is entryfix=0 & op8=0xFc; op4=0xd & op2m=0 & An0; SIMM32 	{ update_add(An0, SIMM32); }
+:ADD SIMM8, "SP" 	is entryfix=0 & op8=0xF8; op8=0xFE; SIMM8					{ update_add(SP, sext(SIMM8)); }
+:ADD SIMM16, "SP" 	is entryfix=0 & op8=0xFA; op8=0xFE; SIMM16 					{ update_add(SP, sext(SIMM16)); }
+:ADD SIMM32, "SP" 	is entryfix=0 & op8=0xFC; op8=0xFE; SIMM32 					{ update_add(SP, SIMM32); }
+:ADDC Dm1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x4 & Dm1 & Dn0 				{ update_add(Dn0, Dm1 + zext($(CF))); }
 
-:SUB Dm1, Dn0 		is op8=0xF1; op4=0x0 & Dm1 & Dn0 				{ update_sub(Dn0, Dm1); }
-:SUB Dm1, An0 		is op8=0xF1; op4=0x2 & Dm1 & An0 				{ update_sub(An0, Dm1); }
-:SUB Am1, Dn0 		is op8=0xF1; op4=0x1 & Am1 & Dn0 				{ update_sub(Dn0, Am1); }
-:SUB Am1, An0 		is op8=0xF1; op4=0x3 & Am1 & An0 				{ update_sub(An0, Am1); }
-:SUB SIMM32, Dn0 	is op8=0xFC; op4=0xc & op2m=1 & Dn0; SIMM32 	{ update_sub(Dn0, SIMM32); }
-:SUB SIMM32, An0 	is op8=0xFC; op4=0xd & op2m=1 & An0; SIMM32 	{ update_sub(An0, SIMM32); }
-:SUBC Dm1, Dn0 		is op8=0xF1; op4=0x8 & Dm1 & Dn0 				{ update_add(Dn0, Dm1 - zext($(CF))); }
+:SUB Dm1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x0 & Dm1 & Dn0 				{ update_sub(Dn0, Dm1); }
+:SUB Dm1, An0 		is entryfix=0 & op8=0xF1; op4=0x2 & Dm1 & An0 				{ update_sub(An0, Dm1); }
+:SUB Am1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x1 & Am1 & Dn0 				{ update_sub(Dn0, Am1); }
+:SUB Am1, An0 		is entryfix=0 & op8=0xF1; op4=0x3 & Am1 & An0 				{ update_sub(An0, Am1); }
+:SUB SIMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xc & op2m=1 & Dn0; SIMM32 	{ update_sub(Dn0, SIMM32); }
+:SUB SIMM32, An0 	is entryfix=0 & op8=0xFC; op4=0xd & op2m=1 & An0; SIMM32 	{ update_sub(An0, SIMM32); }
+:SUBC Dm1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x8 & Dm1 & Dn0 				{ update_add(Dn0, Dm1 - zext($(CF))); }
 
 
-:MUL Dm1, Dn0 		is op8=0xF2; op4=0x4 & Dm1 & Dn0 				{ local r:8=sext(Dm1)*sext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_S32(Dn0); }
-:MULU Dm1, Dn0 		is op8=0xF2; op4=0x5 & Dm1 & Dn0 				{ local r:8=zext(Dm1)*zext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_S32(Dn0); }
+:MUL Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x4 & Dm1 & Dn0 				{ local r:8=sext(Dm1)*sext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_S32(Dn0); }
+:MULU Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x5 & Dm1 & Dn0 				{ local r:8=zext(Dm1)*zext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_S32(Dn0); }
 
-:DIV Dm1, Dn0 		is op8=0xF2; op4=0x6 & Dm1 & Dn0 				
+:DIV Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x6 & Dm1 & Dn0 				
 { 
 	local v0:8 = sext(Dn0);
 	local v1:8 = sext(Dm1);
@@ -447,7 +507,7 @@ macro update_sub(a, b) {
 	MDR = rem:4; 
 	update_ZN_S32(Dn0); 
 }
-:DIVU Dm1, Dn0 		is op8=0xF2; op4=0x7 & Dm1 & Dn0 				
+:DIVU Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x7 & Dm1 & Dn0 				
 { 
 	local v0:8 = zext(Dn0);
 	local v1:8 = zext(Dm1);
@@ -465,119 +525,119 @@ macro update_sub(a, b) {
 }
 
 
-:INC Dn1 		is op4=0x4 & Dn1 & op2n=0 	{ update_add(Dn1, 1); }
-:INC An1 		is op4=0x4 & An1 & op2n=1 	{ An1 = An1 + 1; }
-:INC4 An0 		is op4=0x5 & op2m=0 & An0  	{ An0 = An0 + 4; }
+:INC Dn1 		is entryfix=0 & op4=0x4 & Dn1 & op2n=0 	{ update_add(Dn1, 1); }
+:INC An1 		is entryfix=0 & op4=0x4 & An1 & op2n=1 	{ An1 = An1 + 1; }
+:INC4 An0 		is entryfix=0 & op4=0x5 & op2m=0 & An0  	{ An0 = An0 + 4; }
 
 # Comparative instructions
 
-:CMP Dm1, Dn0 		is op4=0xa & Dm1 & Dn0 				{ update_sub_flags(Dn0, Dm1); }
-:CMP Dm1, An0 		is op8=0xF1; op4=0xa & Dm1 & An0 	{ update_sub_flags(An0, Dm1); }
-:CMP Am1, Dn0 		is op8=0xF1; op4=0x9 & Am1 & Dn0 	{ update_sub_flags(Dn0, Am1); }
-:CMP Am1, An0 		is op4=0xb & Am1 & An0 				{ update_sub_flags(An0, Am1); }
-:CMP SIMM8, Dn0 	is op4=0xa & Dn1 & Dn0 & reg0=reg1; SIMM8 		{ update_sub_flags(Dn0, sext(SIMM8)); }
-:CMP SIMM16, Dn0 	is op8=0xFA; op4=0xc & op2m=2 & Dn0; SIMM16 	{ update_sub_flags(Dn0, sext(SIMM16)); }
-:CMP SIMM32, Dn0 	is op8=0xFC; op4=0xc & op2m=2 & Dn0; SIMM32 	{ update_sub_flags(Dn0, SIMM32); }
-:CMP SIMM8, An0 	is op4=0xb & An1 & An0 & reg0=reg1; SIMM8 		{ update_sub_flags(An0, sext(SIMM8)); }
-:CMP SIMM16, An0 	is op8=0xFA; op4=0xd & op2m=2 & An0; SIMM16 	{ update_sub_flags(An0, sext(SIMM16)); }
-:CMP SIMM32, An0 	is op8=0xFC; op4=0xd & op2m=2 & An0; SIMM32 	{ update_sub_flags(An0, SIMM32); }
+:CMP Dm1, Dn0 		is entryfix=0 & op4=0xa & Dm1 & Dn0 				{ update_sub_flags(Dn0, Dm1); }
+:CMP Dm1, An0 		is entryfix=0 & op8=0xF1; op4=0xa & Dm1 & An0 	{ update_sub_flags(An0, Dm1); }
+:CMP Am1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x9 & Am1 & Dn0 	{ update_sub_flags(Dn0, Am1); }
+:CMP Am1, An0 		is entryfix=0 & op4=0xb & Am1 & An0 				{ update_sub_flags(An0, Am1); }
+:CMP SIMM8, Dn0 	is entryfix=0 & op4=0xa & Dn1 & Dn0 & reg0=reg1; SIMM8 		{ update_sub_flags(Dn0, sext(SIMM8)); }
+:CMP SIMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xc & op2m=2 & Dn0; SIMM16 	{ update_sub_flags(Dn0, sext(SIMM16)); }
+:CMP SIMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xc & op2m=2 & Dn0; SIMM32 	{ update_sub_flags(Dn0, SIMM32); }
+:CMP SIMM8, An0 	is entryfix=0 & op4=0xb & An1 & An0 & reg0=reg1; SIMM8 		{ update_sub_flags(An0, sext(SIMM8)); }
+:CMP SIMM16, An0 	is entryfix=0 & op8=0xFA; op4=0xd & op2m=2 & An0; SIMM16 	{ update_sub_flags(An0, sext(SIMM16)); }
+:CMP SIMM32, An0 	is entryfix=0 & op8=0xFC; op4=0xd & op2m=2 & An0; SIMM32 	{ update_sub_flags(An0, SIMM32); }
 
 # Logical operation instructions
 
-:AND Dm1, Dn0 		is op8=0xF2; op4=0 & Dm1 & Dn0 				{ Dn0 = Dm1 & Dn0; update_ZN_S32(Dn0); }
-:AND IMM8, Dn0 		is op8=0xF8; op4=0xE & op2m=0 & Dn0; IMM8	{ Dn0 = zext(IMM8) & Dn0; update_ZN_S32(Dn0); }
-:AND IMM16, Dn0 	is op8=0xFA; op4=0xE & op2m=0 & Dn0; IMM16	{ Dn0 = zext(IMM16) & Dn0; update_ZN_S32(Dn0); }
-:AND IMM32, Dn0 	is op8=0xFC; op4=0xE & op2m=0 & Dn0; IMM32	{ Dn0 = IMM32 & Dn0; update_ZN_S32(Dn0); }
-:AND IMM16, "PSW" 	is op8=0xFA; op8=0xFC; IMM16				{ PSW = zext(IMM16) & PSW; }
+:AND Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0 & Dm1 & Dn0 				{ Dn0 = Dm1 & Dn0; update_ZN_S32(Dn0); }
+:AND IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=0 & Dn0; IMM8	{ Dn0 = zext(IMM8) & Dn0; update_ZN_S32(Dn0); }
+:AND IMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xE & op2m=0 & Dn0; IMM16	{ Dn0 = zext(IMM16) & Dn0; update_ZN_S32(Dn0); }
+:AND IMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xE & op2m=0 & Dn0; IMM32	{ Dn0 = IMM32 & Dn0; update_ZN_S32(Dn0); }
+:AND IMM16, "PSW" 	is entryfix=0 & op8=0xFA; op8=0xFC; IMM16				{ PSW = zext(IMM16) & PSW; }
 
-:OR Dm1, Dn0 		is op8=0xF2; op4=1 & Dm1 & Dn0 				{ Dn0 = Dm1 | Dn0; update_ZN_S32(Dn0); }
-:OR IMM8, Dn0 		is op8=0xF8; op4=0xE & op2m=1 & Dn0; IMM8	{ Dn0 = zext(IMM8) | Dn0; update_ZN_S32(Dn0); }
-:OR IMM16, Dn0 		is op8=0xFA; op4=0xE & op2m=1 & Dn0; IMM16	{ Dn0 = zext(IMM16) | Dn0; update_ZN_S32(Dn0); }
-:OR IMM32, Dn0 		is op8=0xFC; op4=0xE & op2m=1 & Dn0; IMM32	{ Dn0 = IMM32 | Dn0; update_ZN_S32(Dn0); }
-:OR IMM16, "PSW" 	is op8=0xFA; op8=0xFD; IMM16				{ PSW = zext(IMM16) | PSW; }
+:OR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=1 & Dm1 & Dn0 				{ Dn0 = Dm1 | Dn0; update_ZN_S32(Dn0); }
+:OR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=1 & Dn0; IMM8	{ Dn0 = zext(IMM8) | Dn0; update_ZN_S32(Dn0); }
+:OR IMM16, Dn0 		is entryfix=0 & op8=0xFA; op4=0xE & op2m=1 & Dn0; IMM16	{ Dn0 = zext(IMM16) | Dn0; update_ZN_S32(Dn0); }
+:OR IMM32, Dn0 		is entryfix=0 & op8=0xFC; op4=0xE & op2m=1 & Dn0; IMM32	{ Dn0 = IMM32 | Dn0; update_ZN_S32(Dn0); }
+:OR IMM16, "PSW" 	is entryfix=0 & op8=0xFA; op8=0xFD; IMM16				{ PSW = zext(IMM16) | PSW; }
 
-:XOR Dm1, Dn0 		is op8=0xF2; op4=2 & Dm1 & Dn0 				{ Dn0 = Dm1 ^ Dn0; update_ZN_S32(Dn0); }
-:XOR IMM16, Dn0 	is op8=0xFA; op4=0xE & op2m=2 & Dn0; IMM16	{ Dn0 = zext(IMM16) ^ Dn0; update_ZN_S32(Dn0); }
-:XOR IMM32, Dn0 	is op8=0xFC; op4=0xE & op2m=2 & Dn0; IMM32	{ Dn0 = IMM32 ^ Dn0; update_ZN_S32(Dn0); }
+:XOR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=2 & Dm1 & Dn0 				{ Dn0 = Dm1 ^ Dn0; update_ZN_S32(Dn0); }
+:XOR IMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xE & op2m=2 & Dn0; IMM16	{ Dn0 = zext(IMM16) ^ Dn0; update_ZN_S32(Dn0); }
+:XOR IMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xE & op2m=2 & Dn0; IMM32	{ Dn0 = IMM32 ^ Dn0; update_ZN_S32(Dn0); }
 
-:NOT Dm1, Dn0 		is op8=0xF2; op4=3 & Dm1 & Dn0 				{ Dn0 = Dm1 ^ Dn0; update_ZN_S32(Dn0); }
+:NOT Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=3 & Dm1 & Dn0 				{ Dn0 = Dm1 ^ Dn0; update_ZN_S32(Dn0); }
 
 # bit instructions
 
-:BTST IMM8, Dn0 		is op8=0xF8; op4=0xE & op2m=3 & Dn0; IMM8	{ update_ZN_S32(zext(IMM8) & Dn0); }
-:BTST IMM16, Dn0 		is op8=0xFA; op4=0xE & op2m=3 & Dn0; IMM16	{ update_ZN_S32(zext(IMM16) & Dn0); }
-:BTST IMM32, Dn0 		is op8=0xFC; op4=0xE & op2m=3 & Dn0; IMM32	{ update_ZN_S32(IMM32 & Dn0); }
-:BTST IMM8, (D8, An0) 	is op8=0xFA; op4=0xf & op2m=2 & An0; D8; IMM8 	{ local addr:4 = (zext(D8) + An0); 	$(ZF) = ((*:1 addr) & IMM8) == 0; }
-:BTST IMM8, (IMM16) 	is op8=0xFE; op8=0x82; IMM16; IMM8 				{ local addr:4 = zext(IMM16); 		$(ZF) = ((*:1 addr) & IMM8) == 0; }
-:BTST IMM8, (IMM32) 	is op8=0xFE; op8=0x02; IMM32; IMM8 				{ local addr:4 = IMM32; 			$(ZF) = ((*:1 addr) & IMM8) == 0; }
+:BTST IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=3 & Dn0; IMM8	{ update_ZN_S32(zext(IMM8) & Dn0); }
+:BTST IMM16, Dn0 		is entryfix=0 & op8=0xFA; op4=0xE & op2m=3 & Dn0; IMM16	{ update_ZN_S32(zext(IMM16) & Dn0); }
+:BTST IMM32, Dn0 		is entryfix=0 & op8=0xFC; op4=0xE & op2m=3 & Dn0; IMM32	{ update_ZN_S32(IMM32 & Dn0); }
+:BTST IMM8, (D8, An0) 	is entryfix=0 & op8=0xFA; op4=0xf & op2m=2 & An0; D8; IMM8 	{ local addr:4 = (zext(D8) + An0); 	$(ZF) = ((*:1 addr) & IMM8) == 0; }
+:BTST IMM8, (IMM16) 	is entryfix=0 & op8=0xFE; op8=0x82; IMM16; IMM8 				{ local addr:4 = zext(IMM16); 		$(ZF) = ((*:1 addr) & IMM8) == 0; }
+:BTST IMM8, (IMM32) 	is entryfix=0 & op8=0xFE; op8=0x02; IMM32; IMM8 				{ local addr:4 = IMM32; 			$(ZF) = ((*:1 addr) & IMM8) == 0; }
 
-:BSET Dm1, (An0) 		is op8=0xF0; op4=0x8 & Dm1 & An0					{ local temp:1 = (*:1 An0); 		 $(ZF) = (temp & Dm1:1) == 0; 	   *:1 An0 = (temp | Dm1:1); }
-:BSET IMM8, (D8, An0) 	is op8=0xFA; op4=0xf & op2m=0 & An0; D8; IMM8		{ local addr:4 = (An0 + sext(D8)); 	local temp:1 = *:1 addr; $(ZF) = (temp & zext(IMM8)) == 0;		 		*:1 addr = (temp | zext(IMM8)); }
-:BSET IMM8, (IMM16) 	is op8=0xFE; op8=0x80; IMM16; IMM8					{ local addr:4 = zext(IMM16); 		local temp:1 = *:1 addr; 	 $(ZF) = (temp & zext(IMM8)) == 0; 	*:1 addr = (temp | zext(IMM8)); }
-:BSET IMM8, (IMM32) 	is op8=0xFE; op8=0x00; IMM32; IMM8					{ local temp:1 = (*:1  IMM32); 			 $(ZF) = (temp & zext(IMM8)) == 0; *:1 IMM32 = (temp | zext(IMM8)); }
+:BSET Dm1, (An0) 		is entryfix=0 & op8=0xF0; op4=0x8 & Dm1 & An0					{ local temp:1 = (*:1 An0); 		 $(ZF) = (temp & Dm1:1) == 0; 	   *:1 An0 = (temp | Dm1:1); }
+:BSET IMM8, (D8, An0) 	is entryfix=0 & op8=0xFA; op4=0xf & op2m=0 & An0; D8; IMM8		{ local addr:4 = (An0 + sext(D8)); 	local temp:1 = *:1 addr; $(ZF) = (temp & zext(IMM8)) == 0;		 		*:1 addr = (temp | zext(IMM8)); }
+:BSET IMM8, (IMM16) 	is entryfix=0 & op8=0xFE; op8=0x80; IMM16; IMM8					{ local addr:4 = zext(IMM16); 		local temp:1 = *:1 addr; 	 $(ZF) = (temp & zext(IMM8)) == 0; 	*:1 addr = (temp | zext(IMM8)); }
+:BSET IMM8, (IMM32) 	is entryfix=0 & op8=0xFE; op8=0x00; IMM32; IMM8					{ local temp:1 = (*:1  IMM32); 			 $(ZF) = (temp & zext(IMM8)) == 0; *:1 IMM32 = (temp | zext(IMM8)); }
 
-:BCLR Dm1, (An0) 		is op8=0xF0; op4=0x9 & Dm1 & An0					{ local temp:1 = (*:1 An0); 		 $(ZF) = (temp & Dm1:1)  == 0; *:1 An0 = (temp | ~Dm1:1); }
-:BCLR IMM8, (D8, An0) 	is op8=0xFA; op4=0xf & op2m=1 & An0; D8; IMM8		{ local addr:4 = (An0 + sext(D8)); 	local temp:1 = *:1 addr; $(ZF) = (temp & IMM8) == 0; *:1 addr = (temp | ~zext(IMM8)); }
-:BCLR IMM8, (IMM16) 	is op8=0xFE; op8=0x81; IMM16; IMM8					{ local addr:4 = zext(IMM16); 		local temp:1 = *:1 addr; $(ZF) = (temp & IMM8) == 0;  *:1 addr = (temp | ~zext(IMM8)); }
-:BCLR IMM8, (IMM32) 	is op8=0xFE; op8=0x01; IMM32; IMM8					{ local temp:1 = (*:1  IMM32); 			 $(ZF) = (temp & IMM8) == 0; *:1 IMM32 = (temp |  ~zext(IMM8)); }
+:BCLR Dm1, (An0) 		is entryfix=0 & op8=0xF0; op4=0x9 & Dm1 & An0					{ local temp:1 = (*:1 An0); 		 $(ZF) = (temp & Dm1:1)  == 0; *:1 An0 = (temp | ~Dm1:1); }
+:BCLR IMM8, (D8, An0) 	is entryfix=0 & op8=0xFA; op4=0xf & op2m=1 & An0; D8; IMM8		{ local addr:4 = (An0 + sext(D8)); 	local temp:1 = *:1 addr; $(ZF) = (temp & IMM8) == 0; *:1 addr = (temp | ~zext(IMM8)); }
+:BCLR IMM8, (IMM16) 	is entryfix=0 & op8=0xFE; op8=0x81; IMM16; IMM8					{ local addr:4 = zext(IMM16); 		local temp:1 = *:1 addr; $(ZF) = (temp & IMM8) == 0;  *:1 addr = (temp | ~zext(IMM8)); }
+:BCLR IMM8, (IMM32) 	is entryfix=0 & op8=0xFE; op8=0x01; IMM32; IMM8					{ local temp:1 = (*:1  IMM32); 			 $(ZF) = (temp & IMM8) == 0; *:1 IMM32 = (temp |  ~zext(IMM8)); }
 
 # shifters
 
-:ASR Dm1, Dn0 		is op8=0xF2; op4=0xb & Dm1 & Dn0 				{ local mask:1 = (Dm1 & 0x1f) != 0;  $(CF) = ($(CF) & ~mask) | (Dm1:1 & mask);  Dn0 = sext(Dn0 s>> (Dm1 & 0x1f));  update_ZN_S32(Dn0); }
-:ASR IMM8, Dn0 		is op8=0xF8; op4=0xc & op2m=2 & Dn0; IMM8 		{ local mask:1 = (IMM8 & 0x1f) != 0; $(CF) = ($(CF) & ~mask) | (IMM8 & mask); Dn0 = sext(Dn0 s>> (IMM8 & 0x1f)); update_ZN_S32(Dn0); }
+:ASR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0xb & Dm1 & Dn0 				{ local mask:1 = (Dm1 & 0x1f) != 0;  $(CF) = ($(CF) & ~mask) | (Dm1:1 & mask);  Dn0 = sext(Dn0 s>> (Dm1 & 0x1f));  update_ZN_S32(Dn0); }
+:ASR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=2 & Dn0; IMM8 		{ local mask:1 = (IMM8 & 0x1f) != 0; $(CF) = ($(CF) & ~mask) | (IMM8 & mask); Dn0 = sext(Dn0 s>> (IMM8 & 0x1f)); update_ZN_S32(Dn0); }
 
-:LSR Dm1, Dn0 		is op8=0xF2; op4=0xa & Dm1 & Dn0 				{ local mask:1 = (Dm1 & 0x1f) != 0;  $(CF) = ($(CF) & ~mask) | (Dm1:1 & mask);  Dn0 = zext(Dn0 >> (Dm1 & 0x1f));  update_ZN_S32(Dn0); } # TODO: flags
-:LSR IMM8, Dn0 		is op8=0xF8; op4=0xc & op2m=1 & Dn0; IMM8 		{ local mask:1 = (IMM8 & 0x1f) != 0; $(CF) = ($(CF) & ~mask) | (IMM8 & mask); Dn0 = zext(Dn0 >> (IMM8 & 0x1f)); update_ZN_S32(Dn0); } # TODO: flags
+:LSR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0xa & Dm1 & Dn0 				{ local mask:1 = (Dm1 & 0x1f) != 0;  $(CF) = ($(CF) & ~mask) | (Dm1:1 & mask);  Dn0 = zext(Dn0 >> (Dm1 & 0x1f));  update_ZN_S32(Dn0); } # TODO: flags
+:LSR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=1 & Dn0; IMM8 		{ local mask:1 = (IMM8 & 0x1f) != 0; $(CF) = ($(CF) & ~mask) | (IMM8 & mask); Dn0 = zext(Dn0 >> (IMM8 & 0x1f)); update_ZN_S32(Dn0); } # TODO: flags
 
 
-:ASL Dm1, Dn0 		is op8=0xF2; op4=0x9 & Dm1 & Dn0 				{ Dn0 = Dn0 << (Dm1 & 0x1f); }
-:ASL IMM8, Dn0 		is op8=0xF8; op4=0xc & op2m=0 & Dn0; IMM8 		{ Dn0 = Dn0 << (IMM8 & 0x1f); }
-:ASL2 Dn0 			is op4=0x5 & op2m=1 & Dn0 						{ Dn0 = (Dn0 << 2); }
+:ASL Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x9 & Dm1 & Dn0 				{ Dn0 = Dn0 << (Dm1 & 0x1f); }
+:ASL IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=0 & Dn0; IMM8 		{ Dn0 = Dn0 << (IMM8 & 0x1f); }
+:ASL2 Dn0 			is entryfix=0 & op4=0x5 & op2m=1 & Dn0 						{ Dn0 = (Dn0 << 2); }
 
-:ROR Dn0 		is op8=0xF2; op4=0x8 & op2m=1 & Dn0 				{ mn_todo(); }
-:ROL Dn0 		is op8=0xF2; op4=0x8 & op2m=0 & Dn0 				{ mn_todo(); }
+:ROR Dn0 		is entryfix=0 & op8=0xF2; op4=0x8 & op2m=1 & Dn0 				{ mn_todo(); }
+:ROL Dn0 		is entryfix=0 & op8=0xF2; op4=0x8 & op2m=0 & Dn0 				{ mn_todo(); }
 
 
 # branch
 
-:BEQ D8rel 	is op8=0xc8; D8rel 				{ if ($(ZF) == 1) 						goto D8rel; }
-:BNE D8rel 	is op8=0xc9; D8rel 				{ if ($(ZF) == 0) 						goto D8rel; }
-:BGT D8rel 	is op8=0xc1; D8rel 				{ if (($(ZF) | ($(NF) ^ $(VF))) == 0) 	goto D8rel; }
-:BGE D8rel 	is op8=0xc2; D8rel 				{ if (($(NF) ^ $(VF)) == 0) 			goto D8rel; }
-:BLE D8rel 	is op8=0xc3; D8rel 				{ if ($(ZF) | ($(NF) ^ $(VF)) == 1) 	goto D8rel;}
-:BLT D8rel 	is op8=0xc0; D8rel 				{ if (($(NF) ^ $(VF)) == 1) 			goto D8rel; }
-:BHI D8rel 	is op8=0xc5; D8rel 				{ if (($(CF) | $(ZF)) == 0) 			goto D8rel; }
-:BCC D8rel 	is op8=0xc6; D8rel 				{ if ($(CF) == 0) 						goto D8rel; }
-:BLS D8rel 	is op8=0xc7; D8rel 				{ if (($(CF) | $(ZF)) == 1) 			goto D8rel; }
-:BCS D8rel 	is op8=0xc4; D8rel 				{ if ($(CF) == 1) 						goto D8rel; }
+:BEQ D8rel 	is entryfix=0 & op8=0xc8; D8rel 				{ if ($(ZF) == 1) 						goto D8rel; }
+:BNE D8rel 	is entryfix=0 & op8=0xc9; D8rel 				{ if ($(ZF) == 0) 						goto D8rel; }
+:BGT D8rel 	is entryfix=0 & op8=0xc1; D8rel 				{ if (($(ZF) | ($(NF) ^ $(VF))) == 0) 	goto D8rel; }
+:BGE D8rel 	is entryfix=0 & op8=0xc2; D8rel 				{ if (($(NF) ^ $(VF)) == 0) 			goto D8rel; }
+:BLE D8rel 	is entryfix=0 & op8=0xc3; D8rel 				{ if ($(ZF) | ($(NF) ^ $(VF)) == 1) 	goto D8rel;}
+:BLT D8rel 	is entryfix=0 & op8=0xc0; D8rel 				{ if (($(NF) ^ $(VF)) == 1) 			goto D8rel; }
+:BHI D8rel 	is entryfix=0 & op8=0xc5; D8rel 				{ if (($(CF) | $(ZF)) == 0) 			goto D8rel; }
+:BCC D8rel 	is entryfix=0 & op8=0xc6; D8rel 				{ if ($(CF) == 0) 						goto D8rel; }
+:BLS D8rel 	is entryfix=0 & op8=0xc7; D8rel 				{ if (($(CF) | $(ZF)) == 1) 			goto D8rel; }
+:BCS D8rel 	is entryfix=0 & op8=0xc4; D8rel 				{ if ($(CF) == 1) 						goto D8rel; }
 
-:BVC D8rel 	is op8=0xf8; op8=0xe8; D8rel 	{ if ($(VF) == 0) goto D8rel; }
-:BVS D8rel 	is op8=0xf8; op8=0xe9; D8rel 	{ if ($(VF) == 1) goto D8rel; }
-:BNC D8rel 	is op8=0xf8; op8=0xea; D8rel 	{ if ($(NF) == 0) goto D8rel; }
-:BNS D8rel 	is op8=0xf8; op8=0xeb; D8rel 	{ if ($(NF) == 1) goto D8rel; }
+:BVC D8rel 	is entryfix=0 & op8=0xf8; op8=0xe8; D8rel 	{ if ($(VF) == 0) goto D8rel; }
+:BVS D8rel 	is entryfix=0 & op8=0xf8; op8=0xe9; D8rel 	{ if ($(VF) == 1) goto D8rel; }
+:BNC D8rel 	is entryfix=0 & op8=0xf8; op8=0xea; D8rel 	{ if ($(NF) == 0) goto D8rel; }
+:BNS D8rel 	is entryfix=0 & op8=0xf8; op8=0xeb; D8rel 	{ if ($(NF) == 1) goto D8rel; }
 
-:BRA D8rel 	is op8=0xca; D8rel 				{ goto D8rel; }
+:BRA D8rel 	is entryfix=0 & op8=0xca; D8rel 				{ goto D8rel; }
 
 # NOTE: THis has inverted statements compared to above
-:LEQ 	is op8=0xd8 				{ if ($(ZF) != 1)                     goto <end>; PC = LAR-4; goto [PC]; <end> } 
-:LNE 	is op8=0xd9 				{ if ($(ZF) != 0)                     goto <end>; PC = LAR-4; goto [PC]; <end> } 
-:LGT 	is op8=0xd1 				{ if (($(ZF) | ($(NF) ^ $(VF))) != 0) goto <end>; PC = LAR-4; goto [PC]; <end> }
-:LGE 	is op8=0xd2 				{ if (($(NF) ^ $(VF)) != 0)           goto <end>; PC = LAR-4; goto [PC]; <end> }
-:LLE 	is op8=0xd3 				{ if ($(ZF) | ($(NF) ^ $(VF)) != 1)   goto <end>; PC = LAR-4; goto [PC]; <end> }
-:LLT 	is op8=0xd0 				{ if (($(NF) ^ $(VF)) != 1)           goto <end>; PC = LAR-4; goto [PC]; <end> } 
-:LHI 	is op8=0xd5 				{ if (($(CF) | $(ZF)) != 0)           goto <end>; PC = LAR-4; goto [PC]; <end> } 
-:LCC 	is op8=0xd6 				{ if ($(CF) != 0)                     goto <end>; PC = LAR-4; goto [PC]; <end> } 
-:LLS 	is op8=0xd7 				{ if (($(CF) | $(ZF)) != 1)           goto <end>; PC = LAR-4; goto [PC]; <end> }
-:LCS 	is op8=0xd4 				{ if ($(CF) != 1)                     goto <end>; PC = LAR-4; goto [PC]; <end> }
+:LEQ 	is entryfix=0 & op8=0xd8 				{ if ($(ZF) != 1)                     goto <end>; PC = LAR-4; goto [PC]; <end> } 
+:LNE 	is entryfix=0 & op8=0xd9 				{ if ($(ZF) != 0)                     goto <end>; PC = LAR-4; goto [PC]; <end> } 
+:LGT 	is entryfix=0 & op8=0xd1 				{ if (($(ZF) | ($(NF) ^ $(VF))) != 0) goto <end>; PC = LAR-4; goto [PC]; <end> }
+:LGE 	is entryfix=0 & op8=0xd2 				{ if (($(NF) ^ $(VF)) != 0)           goto <end>; PC = LAR-4; goto [PC]; <end> }
+:LLE 	is entryfix=0 & op8=0xd3 				{ if ($(ZF) | ($(NF) ^ $(VF)) != 1)   goto <end>; PC = LAR-4; goto [PC]; <end> }
+:LLT 	is entryfix=0 & op8=0xd0 				{ if (($(NF) ^ $(VF)) != 1)           goto <end>; PC = LAR-4; goto [PC]; <end> } 
+:LHI 	is entryfix=0 & op8=0xd5 				{ if (($(CF) | $(ZF)) != 0)           goto <end>; PC = LAR-4; goto [PC]; <end> } 
+:LCC 	is entryfix=0 & op8=0xd6 				{ if ($(CF) != 0)                     goto <end>; PC = LAR-4; goto [PC]; <end> } 
+:LLS 	is entryfix=0 & op8=0xd7 				{ if (($(CF) | $(ZF)) != 1)           goto <end>; PC = LAR-4; goto [PC]; <end> }
+:LCS 	is entryfix=0 & op8=0xd4 				{ if ($(CF) != 1)                     goto <end>; PC = LAR-4; goto [PC]; <end> }
 
-:LRA 	is op8=0xda 				{ PC = LAR - 4; goto [PC]; }
+:LRA 	is entryfix=0 & op8=0xda 				{ PC = LAR - 4; goto [PC]; }
 
-:SETLB 	is op8=0xdb 				{ local addr:4 = inst_next; LIR = *addr; LAR = addr + 4; }
+:SETLB 	is entryfix=0 & op8=0xdb 				{ local addr:4 = inst_next; LIR = *addr; LAR = addr + 4; }
 
 
-:JMP (An0) 	is op8=0xF0; op4=0xf & op2m=1 & An0  	{ goto [An0]; }
-:JMP D16rel 	is op8=0xCC; D16rel					{ goto D16rel; }
-:JMP D32rel 	is op8=0xDC; D32rel					{ goto D32rel; }
+:JMP (An0) 	is entryfix=0 & op8=0xF0; op4=0xf & op2m=1 & An0  	{ goto [An0]; }
+:JMP D16rel 	is entryfix=0 & op8=0xCC; D16rel					{ goto D16rel; }
+:JMP D32rel 	is entryfix=0 & op8=0xDC; D32rel					{ goto D32rel; }
 
 
 # manual says no sub4 before moving retaddr to sp.
@@ -596,47 +656,47 @@ macro update_sub(a, b) {
 #:CALL D16rel, RegsBrace, IMM8		is op8=0xCD; D16rel; RegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D16rel; SP = SP + zext(IMM8); }
 #:CALL D32rel, RegsBrace, IMM8		is op8=0xDD; D32rel; RegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D32rel; SP = SP + zext(IMM8); }
 # does this work? lmao
-:CALL D16rel, RegsBrace, IMM8		is op8=0xCD; D16rel; RegsBrace & PopRegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D16rel; mult_addr = SP; build PopRegsBrace; SP = SP + zext(IMM8); }
-:CALL D32rel, RegsBrace, IMM8		is op8=0xDD; D32rel; RegsBrace & PopRegsBrace; IMM8		{ MDR = inst_next; mult_addr = SP; build RegsBrace; SP = SP - zext(IMM8); call D32rel; mult_addr = SP; build PopRegsBrace; SP = SP + zext(IMM8); }
+:CALL D16rel, RegsShow, IMM8		is entryfix=0 & op8=0xCD; D16rel; RegsShow; IMM8		{ MDR = inst_next; call D16rel; }
+:CALL D32rel, RegsShow, IMM8		is entryfix=0 & op8=0xDD; D32rel; RegsShow; IMM8		{ MDR = inst_next; call D32rel; }
 
 #:CALLS (An0)		is op8=0xF0; op4=0xF & op2m=0 & An0		{ *:4 SP = inst_next; MDR = inst_next; call [An0]; }
 #:CALLS D16rel		is op8=0xFA; op8=0xFF; D16rel			{ *:4 SP = inst_next; MDR = inst_next; call D16rel; }
 #:CALLS D32rel		is op8=0xFC; op8=0xFF; D32rel			{ *:4 SP = inst_next; MDR = inst_next; call D32rel; }
-:CALLS (An0)		is op8=0xF0; op4=0xF & op2m=0 & An0		{ MDR = inst_next; call [An0]; }
-:CALLS D16rel		is op8=0xFA; op8=0xFF; D16rel			{ *:4 MDR = inst_next; call D16rel; }
-:CALLS D32rel		is op8=0xFC; op8=0xFF; D32rel			{ *:4 MDR = inst_next; call D32rel; }
+:CALLS (An0)		is entryfix=0 & op8=0xF0; op4=0xF & op2m=0 & An0		{ MDR = inst_next; call [An0]; }
+:CALLS D16rel		is entryfix=0 & op8=0xFA; op8=0xFF; D16rel			{ MDR = inst_next; call D16rel; }
+:CALLS D32rel		is entryfix=0 & op8=0xFC; op8=0xFF; D32rel			{ MDR = inst_next; call D32rel; }
 
-:RET PopRegsBrace, IMM8		is op8=0xDF; PopRegsBrace; IMM8	{ SP = SP + zext(IMM8); mult_addr=SP; build PopRegsBrace; PC = *SP; return [PC]; }
-:RETF PopRegsBrace, IMM8	is op8=0xDE; PopRegsBrace; IMM8	{ SP = SP + zext(IMM8); mult_addr=SP; build PopRegsBrace; PC = MDR; return [PC]; }
-:RETS 						is op8=0xF0; op8=0xFC			{ PC = *SP; SP = SP + 4; return [PC]; }
+:RET PopRegsShow, IMM8		is entryfix=0 & op8=0xDF; PopRegsShow; IMM8	{ SP = SP + zext(IMM8); PC = *:4 SP; return [PC]; }
+:RETF PopRegsShow, IMM8	is entryfix=0 & op8=0xDE; PopRegsShow; IMM8	{ SP = SP + zext(IMM8); PC = MDR; return [PC]; }
+:RETS 						is entryfix=0 & op8=0xF0; op8=0xFC			{ PC = *:4 SP; return [PC]; }
 
 # JSR doesnt exist?
 
 # RTS??
-:RTI 			is op8=0xF0; op8=0xFD			{ PSW = *:2 SP; PC = *:4 (SP + 4); SP = SP + 8; return [PC]; }
-:TRAP 			is op8=0xF0; op8=0xFE			{ *[ram]:4 SP = inst_next; PC = 0x40000010; goto [PC]; }
+:RTI 			is entryfix=0 & op8=0xF0; op8=0xFD			{ PSW = *:2 SP; PC = *:4 (SP + 4); SP = SP + 8; return [PC]; }
+:TRAP 			is entryfix=0 & op8=0xF0; op8=0xFE			{ *[ram]:4 SP = inst_next; PC = 0x40000010; goto [PC]; }
 
-:NOP 			is op8=0xCB			{ }
+:NOP 			is entryfix=0 & op8=0xCB			{ }
 
 # Only documented in igen? seems to be used for mn103 based cameras only? 
 # Only generated by their internal compiler probably?
 
-:GETX "MDRQ", Dn0 		is op8=0xf6; op4=0xf & Dm1    & Dn0			{ Dn0 = MDRQ; update_ZN_S32(Dn0); }
-:PUTX Dn0, "MDRQ" 		is op8=0xf5; op4=0x0 & Dm1    & Dn0			{ MDRQ = Dn0; }
+:GETX "MDRQ", Dn0 		is entryfix=0 & op8=0xf6; op4=0xf & Dm1    & Dn0			{ Dn0 = MDRQ; update_ZN_S32(Dn0); }
+:PUTX Dn0, "MDRQ" 		is entryfix=0 & op8=0xf5; op4=0x0 & Dm1    & Dn0			{ MDRQ = Dn0; }
 
-:MULQ Dm1, Dn0 		is op8=0xf6; op4=0x0 & Dm1    & Dn0			{ local r:8=sext(Dm1)   *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQ SIMM8, Dn0 	is op8=0xf9; op4=0x0 & op2m=0 & Dn0; SIMM8	{ local r:8=sext(SIMM8) *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQ SIMM16, Dn0 is op8=0xfb; op4=0x0 & op2m=0 & Dn0; SIMM16	{ local r:8=sext(SIMM16)*sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQ IMM32, Dn0 	is op8=0xfd; op4=0x0 & op2m=0 & Dn0; IMM32	{ local r:8=sext(IMM32) *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQ Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x0 & Dm1    & Dn0			{ local r:8=sext(Dm1)   *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQ SIMM8, Dn0 	is entryfix=0 & op8=0xf9; op4=0x0 & op2m=0 & Dn0; SIMM8	{ local r:8=sext(SIMM8) *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQ SIMM16, Dn0 is  entryfix=0 & op8=0xfb; op4=0x0 & op2m=0 & Dn0; SIMM16	{ local r:8=sext(SIMM16)*sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQ IMM32, Dn0 	is entryfix=0 & op8=0xfd; op4=0x0 & op2m=0 & Dn0; IMM32	{ local r:8=sext(IMM32) *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
 
-:MULQU Dm1, Dn0 		is op8=0xf6; op4=0x1 & Dm1    & Dn0			{ local r:8=zext(Dm1)  *zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQU IMM8, Dn0 		is op8=0xf9; op4=0x1 & op2m=1 & Dn0; IMM8	{ local r:8=zext(IMM8) *zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQU IMM16, Dn0 		is op8=0xfb; op4=0x1 & op2m=1 & Dn0; IMM16	{ local r:8=zext(IMM16)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQU IMM32, Dn0 		is op8=0xfd; op4=0x1 & op2m=1 & Dn0; IMM32	{ local r:8=zext(IMM32)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQU Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x1 & Dm1    & Dn0			{ local r:8=zext(Dm1)  *zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQU IMM8, Dn0 		is entryfix=0 & op8=0xf9; op4=0x1 & op2m=1 & Dn0; IMM8	{ local r:8=zext(IMM8) *zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQU IMM16, Dn0 		is entryfix=0 & op8=0xfb; op4=0x1 & op2m=1 & Dn0; IMM16	{ local r:8=zext(IMM16)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQU IMM32, Dn0 		is entryfix=0 & op8=0xfd; op4=0x1 & op2m=1 & Dn0; IMM32	{ local r:8=zext(IMM32)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
 
-:SAT16 Dm1, Dn0 		is op8=0xf6; op4=0x4 & Dm1    & Dn0			{ mn_todo(); }
-:SAT24 Dm1, Dn0 		is op8=0xf6; op4=0x5 & Dm1    & Dn0			{ mn_todo(); }
-:BSCH Dm1, Dn0 		  is op8=0xf6; op4=0x7 & Dm1    & Dn0			{ mn_todo(); }
+:SAT16 Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x4 & Dm1    & Dn0			{ mn_todo(); }
+:SAT24 Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x5 & Dm1    & Dn0			{ mn_todo(); }
+:BSCH Dm1, Dn0 		  is  entryfix=0 & op8=0xf6; op4=0x7 & Dm1    & Dn0			{ mn_todo(); }
 
 # theres no point in defining undefined instructions?
 
