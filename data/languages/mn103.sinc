@@ -842,13 +842,64 @@ macro shift_zn(v) {
 :MULQU IMM16, Dn0 		is entryfix=0 & op8=0xfb; op4=0x1 & op2m=1 & Dn0; IMM16	{ local r:8=sext(IMM16)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
 :MULQU IMM32, Dn0 		is entryfix=0 & op8=0xfd; op4=0x1 & op2m=1 & Dn0; IMM32	{ local r:8=zext(IMM32)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
 
-:SAT16 Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x4 & Dm1    & Dn0			{ mn_todo(); }
-:SAT24 Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x5 & Dm1    & Dn0			{ mn_todo(); }
-:BSCH Dm1, Dn0 		  is  entryfix=0 & op8=0xf6; op4=0x7 & Dm1    & Dn0			{ mn_todo(); }
+:SAT16 Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x4 & Dm1    & Dn0			{ local t:4 = Dm1;
+  if (t s<= 0x7fff) goto <lo>;
+  t = 0x7fff;
+  goto <done>;
+  <lo>
+  if (t s>= -0x8000) goto <done>;
+  t = -0x8000;
+  <done>
+  Dn0 = t; }
+:SAT24 Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x5 & Dm1    & Dn0			{ local t:4 = Dm1;
+  if (t s<= 0x7fffff) goto <lo>;
+  t = 0x7fffff;
+  goto <done>;
+  <lo>
+  if (t s>= -0x800000) goto <done>;
+  t = -0x800000;
+  <done>
+  Dn0 = t; }
+:BSCH Dm1, Dn0 		  is  entryfix=0 & op8=0xf6; op4=0x7 & Dm1    & Dn0			{ $(CF) = ((Dm1 << (Dn0 & 0x1f)) != 0); }
+# BSCH F6 70: this is exactly what the GNU sim does (C = (Dm << (Dn & 0x1f)) != 0, Dn NOT written). Real hardware probably also writes
+# the bit index to Dn (am33.igen:1648 for the F9FB form), but the sim is the judge here; see FIXLOG group 8.
+
+# --- F6 slots that exist only in binutils / firmware, NOT in the GNU sim (cannot be checked differentially; see FIXLOG group 8) ---
+# getchx / getclx: Dn <- MCRH / MCRL (binutils F6 Cx / Dx; seen in the ISR context save at 0x6003010a)
+:GETCHX Dn0   is entryfix=0 & op8=0xf6; op4=0xc & Dn0   { Dn0 = MCRH; }
+:GETCLX Dn0   is entryfix=0 & op8=0xf6; op4=0xd & Dn0   { Dn0 = MCRL; }
+# swap / swaph Dm,Dn (binutils F6 8x / 9x), semantics of the AM33 register forms (am33.igen:1596 / 1614)
+:SWAP Dm1, Dn0  is entryfix=0 & op8=0xf6; op4=0x8 & Dm1 & Dn0
+{ local s:4 = Dm1;
+  Dn0 = (s << 24) | ((s & 0xff00) << 8) | ((s >> 8) & 0xff00) | (s >> 24); }
+:SWAPH Dm1, Dn0 is entryfix=0 & op8=0xf6; op4=0x9 & Dm1 & Dn0
+{ local s:4 = Dm1;
+  Dn0 = ((s & 0xff) << 8) | ((s >> 8) & 0xff) | (((s >> 16) & 0xff) << 24) | (((s >> 24) & 0xff) << 16); }
+# mcst48 Dn: saturate (MCRH:MCRL) to 48 bit and take bits 47..16 (inferred from am33.igen mcste); mcst9 only as an opaque op
+define pcodeop mn_mcst9;
+:MCST48 Dn0   is entryfix=0 & op8=0xf6; op4=0x6 & Dn0
+{ local t:8 = (zext(MCRH) << 32) | zext(MCRL);
+  local m:8 = t;
+  if (t s<= 0x7fffffffffff) goto <lo>;
+  m = 0x7fffffffffff;
+  goto <done>;
+  <lo>
+  if (t s>= -0x800000000000) goto <done>;
+  m = -0x800000000000;
+  <done>
+  local q:8 = m s>> 16;
+  Dn0 = q:4;
+  $(VF) = (MCVF != 0); $(CF) = 0; }
+:MCST9  Dn0   is entryfix=0 & op8=0xf6; op4=0x3 & Dn0   { Dn0 = mn_mcst9(MCRH, MCRL); }
+# remaining user-defined slots: opaque operations so that control flow continues
+define pcodeop udf;
+:UDF02 Dm1, Dn0 is entryfix=0 & op8=0xf6; op4=0x2 & Dm1 & Dn0 { Dn0 = udf(2:1,  Dm1); }
+:UDF10 Dm1, Dn0 is entryfix=0 & op8=0xf6; op4=0xa & Dm1 & Dn0 { Dn0 = udf(10:1, Dm1); }
+:UDF11 Dm1, Dn0 is entryfix=0 & op8=0xf6; op4=0xb & Dm1 & Dn0 { Dn0 = udf(11:1, Dm1); }
+:UDF14 Dm1, Dn0 is entryfix=0 & op8=0xf6; op4=0xe & Dm1 & Dn0 { Dn0 = udf(14:1, Dm1); }
 
 # theres no point in defining undefined instructions?
 
-# define pcodeop udf;
 # :UDF00 Dm1, Dn0 		is op8=0xf6; op4=0x0 & Dm1    & Dn0			{ Dn0 = udf( 0:1, Dm1); }
 # :UDF00 SIMM8, Dn0 		is op8=0xf9; op4=0x0 & op2m=0 & Dn0; SIMM8	{ Dn0 = udf( 0:1, SIMM8); }
 # :UDF00 SIMM16, Dn0 		is op8=0xfb; op4=0x0 & op2m=0 & Dn0; SIMM16	{ Dn0 = udf( 0:1, SIMM16); }
@@ -983,4 +1034,5 @@ macro shift_zn(v) {
 # :UDFU15 IMM8, Dn0 		is op8=0xf9; op4=0xf & op2m=1 & Dn0; IMM8	{ Dn0 = udfu(15:1, IMM8); }
 # :UDFU15 IMM16, Dn0 	    is op8=0xfb; op4=0xf & op2m=1 & Dn0; IMM16	{ Dn0 = udfu(15:1, IMM16); }
 # :UDFU15 IMM32, Dn0 		is op8=0xfd; op4=0xf & op2m=1 & Dn0; IMM32	{ Dn0 = udfu(15:1, IMM32); }
+
 
