@@ -60,6 +60,105 @@
     </prototype>
   </default_proto>
 
+  <!-- printf-family (2026-10-12): this compiler passes every variadic argument on the stack (format = last named
+       arg at caller (4,sp), va_list = &fmt + 4). Named register args use custom storage on each function; this model
+       only lists the stack so Ghidra does not invent extra D1/A1 "variadic" args. -->
+  <prototype name="__panavarargs" extrapop="0" stackshift="0">
+    <input>
+      <pentry minsize="1" maxsize="500" align="4">
+        <addr offset="4" space="stack" />
+      </pentry>
+    </input>
+    <output>
+      <pentry minsize="1" maxsize="4" metatype="ptr">
+        <register name="A0" />
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D0" />
+      </pentry>
+    </output>
+    <unaffected>
+      <register name="SP" />
+      <register name="D2" /><register name="D3" /><register name="A2" /><register name="A3" />
+    </unaffected>
+    <killedbycall>
+      <register name="D0" /><register name="D1" /><register name="A0" /><register name="A1" /><register name="MDR" />
+    </killedbycall>
+  </prototype>
+  <!-- __panavarargs_*: named register args first (exact order), then everything on the stack from (4,SP). Picked per function by CommitProtos. -->
+  <prototype name="__panavarargs_d0" extrapop="0" stackshift="0">
+    <input>
+      <pentry minsize="1" maxsize="4"><register name="D0" /></pentry>
+      <pentry minsize="1" maxsize="500" align="4">
+        <addr offset="4" space="stack" />
+      </pentry>
+    </input>
+    <output>
+      <pentry minsize="1" maxsize="4" metatype="ptr">
+        <register name="A0" />
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D0" />
+      </pentry>
+    </output>
+    <unaffected>
+      <register name="SP" />
+      <register name="D2" /><register name="D3" /><register name="A2" /><register name="A3" />
+    </unaffected>
+    <killedbycall>
+      <register name="D0" /><register name="D1" /><register name="A0" /><register name="A1" /><register name="MDR" />
+    </killedbycall>
+  </prototype>
+
+  <prototype name="__panavarargs_a0" extrapop="0" stackshift="0">
+    <input>
+      <pentry minsize="1" maxsize="4" metatype="ptr"><register name="A0" /></pentry>
+      <pentry minsize="1" maxsize="500" align="4">
+        <addr offset="4" space="stack" />
+      </pentry>
+    </input>
+    <output>
+      <pentry minsize="1" maxsize="4" metatype="ptr">
+        <register name="A0" />
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D0" />
+      </pentry>
+    </output>
+    <unaffected>
+      <register name="SP" />
+      <register name="D2" /><register name="D3" /><register name="A2" /><register name="A3" />
+    </unaffected>
+    <killedbycall>
+      <register name="D0" /><register name="D1" /><register name="A0" /><register name="A1" /><register name="MDR" />
+    </killedbycall>
+  </prototype>
+
+  <prototype name="__panavarargs_a0d0" extrapop="0" stackshift="0">
+    <input>
+      <pentry minsize="1" maxsize="4" metatype="ptr"><register name="A0" /></pentry>
+      <pentry minsize="1" maxsize="4"><register name="D0" /></pentry>
+      <pentry minsize="1" maxsize="500" align="4">
+        <addr offset="4" space="stack" />
+      </pentry>
+    </input>
+    <output>
+      <pentry minsize="1" maxsize="4" metatype="ptr">
+        <register name="A0" />
+      </pentry>
+      <pentry minsize="1" maxsize="4">
+        <register name="D0" />
+      </pentry>
+    </output>
+    <unaffected>
+      <register name="SP" />
+      <register name="D2" /><register name="D3" /><register name="A2" /><register name="A3" />
+    </unaffected>
+    <killedbycall>
+      <register name="D0" /><register name="D1" /><register name="A0" /><register name="A1" /><register name="MDR" />
+    </killedbycall>
+  </prototype>
+
   <!-- Old guess kept for comparison (GCC-like: D0,D1 then stack at 12). -->
   <prototype name="__mngcccall" extrapop="0" stackshift="0">
     <input>
