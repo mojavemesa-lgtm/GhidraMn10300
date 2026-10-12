@@ -194,88 +194,9 @@ attach variables [ Dn0 Dn1 Dn2  Dm0 Dm1 Dm2  Di0 Di1 Di2 ] [ D0 D1 D2 D3 ];
 
 # TODO: this is inverse? maybe its bottom up?
 
-macro movm_push(d2,d3,a2,a3,ot,x0,x1,x2) {
-  if (x0 == 0:1) goto <e0>;
-  mult_addr = mult_addr - 4; *mult_addr = R2;
-  mult_addr = mult_addr - 4; *mult_addr = R3;
-  <e0>
-  if (x1 == 0:1) goto <e1>;
-  mult_addr = mult_addr - 4; *mult_addr = R4;
-  mult_addr = mult_addr - 4; *mult_addr = R5;
-  mult_addr = mult_addr - 4; *mult_addr = R6;
-  mult_addr = mult_addr - 4; *mult_addr = R7;
-  <e1>
-  if (x2 == 0:1) goto <e2>;
-  mult_addr = mult_addr - 4; *mult_addr = R0;
-  mult_addr = mult_addr - 4; *mult_addr = R1;
-  mult_addr = mult_addr - 16;
-  <e2>
-  if (d2 == 0:1) goto <l1>;
-  mult_addr = mult_addr - 4; *mult_addr = D2;
-  <l1>
-  if (d3 == 0:1) goto <l2>;
-  mult_addr = mult_addr - 4; *mult_addr = D3;
-  <l2>
-  if (a2 == 0:1) goto <l3>;
-  mult_addr = mult_addr - 4; *mult_addr = A2;
-  <l3>
-  if (a3 == 0:1) goto <l4>;
-  mult_addr = mult_addr - 4; *mult_addr = A3;
-  <l4>
-  if (ot == 0:1) goto <l5>;
-  mult_addr = mult_addr - 4; *mult_addr = D0;
-  mult_addr = mult_addr - 4; *mult_addr = D1;
-  mult_addr = mult_addr - 4; *mult_addr = A0;
-  mult_addr = mult_addr - 4; *mult_addr = A1;
-  mult_addr = mult_addr - 4; *mult_addr = MDR;
-  mult_addr = mult_addr - 4; *mult_addr = LIR;
-  mult_addr = mult_addr - 4; *mult_addr = LAR;
-  mult_addr = mult_addr - 4;
-  <l5>
-}
-
-macro movm_pop(d2,d3,a2,a3,ot,x0,x1,x2) {
-  if (ot == 0:1) goto <l5>;
-  mult_addr = mult_addr + 4;
-  LAR = *mult_addr; mult_addr = mult_addr + 4;
-  LIR = *mult_addr; mult_addr = mult_addr + 4;
-  MDR = *mult_addr; mult_addr = mult_addr + 4;
-  A1 = *mult_addr; mult_addr = mult_addr + 4;
-  A0 = *mult_addr; mult_addr = mult_addr + 4;
-  D1 = *mult_addr; mult_addr = mult_addr + 4;
-  D0 = *mult_addr; mult_addr = mult_addr + 4;
-  <l5>
-  if (a3 == 0:1) goto <l4>;
-  A3 = *mult_addr; mult_addr = mult_addr + 4;
-  <l4>
-  if (a2 == 0:1) goto <l3>;
-  A2 = *mult_addr; mult_addr = mult_addr + 4;
-  <l3>
-  if (d3 == 0:1) goto <l2>;
-  D3 = *mult_addr; mult_addr = mult_addr + 4;
-  <l2>
-  if (d2 == 0:1) goto <l1>;
-  D2 = *mult_addr; mult_addr = mult_addr + 4;
-  <l1>
-  if (x2 == 0:1) goto <e2>;
-  mult_addr = mult_addr + 16;
-  R1 = *mult_addr; mult_addr = mult_addr + 4;
-  R0 = *mult_addr; mult_addr = mult_addr + 4;
-  <e2>
-  if (x1 == 0:1) goto <e1>;
-  R7 = *mult_addr; mult_addr = mult_addr + 4;
-  R6 = *mult_addr; mult_addr = mult_addr + 4;
-  R5 = *mult_addr; mult_addr = mult_addr + 4;
-  R4 = *mult_addr; mult_addr = mult_addr + 4;
-  <e1>
-  if (x0 == 0:1) goto <e0>;
-  R3 = *mult_addr; mult_addr = mult_addr + 4;
-  R2 = *mult_addr; mult_addr = mult_addr + 4;
-  <e0>
-}
 
 # MOVM register list. The list below is DISPLAY ONLY (D2,D3,A2,A3,OTHER,EX0,EX1,EX2 like binutils); the stores and loads are
-# done by the macros movm_push / movm_pop in the order the GNU simulator (mn10300.igen movm) uses, checked against the sim in
+# done by the subtables MovmPush / MovmPop (below) in the order the GNU simulator (mn10300.igen movm) uses, checked against the sim in
 # the differential harness (movm families). Layout, highest address first: EX0 (R2,R3), EX1 (R4..R7), EX2 (R0,R1 + 16 reserved
 # bytes for MDRQ/MCRH/MCRL/MCVF, not modelled: the sim does not save them either), D2, D3, A2, A3, OTHER (D0,D1,A0,A1,MDR,LIR,LAR + 1 reserved word).
 
@@ -303,6 +224,56 @@ RegsList1: RegsList2 is RegsList2 & rD2=0 { }
 RegsList1: "D2" is rD2=1 & r06=0 { }
 RegsList1: "D2",RegsList2 is RegsList2 & rD2=1 { }
 RegsBrace: [RegsList1] is RegsList1 { }
+
+# MOVM saves/restores: one subtable per mask bit, resolved at decode time (no p-code branches; the old
+# macro with `if (bit==0) goto` left constant-false branches that the decompiler reported as
+# "Removing unreachable block" at every movm, e.g. ~15,000 function entries). Order = GNU sim (see above).
+MPx0: is rEx0=0 { }
+MPx0: is rEx0=1 { mult_addr = mult_addr - 4; *mult_addr = R2; mult_addr = mult_addr - 4; *mult_addr = R3; }
+MPx1: is rEx1=0 { }
+MPx1: is rEx1=1 { mult_addr = mult_addr - 4; *mult_addr = R4; mult_addr = mult_addr - 4; *mult_addr = R5;
+                  mult_addr = mult_addr - 4; *mult_addr = R6; mult_addr = mult_addr - 4; *mult_addr = R7; }
+MPx2: is rEx2=0 { }
+MPx2: is rEx2=1 { mult_addr = mult_addr - 4; *mult_addr = R0; mult_addr = mult_addr - 4; *mult_addr = R1; mult_addr = mult_addr - 16; }
+MPd2: is rD2=0 { }
+MPd2: is rD2=1 { mult_addr = mult_addr - 4; *mult_addr = D2; }
+MPd3: is rD3=0 { }
+MPd3: is rD3=1 { mult_addr = mult_addr - 4; *mult_addr = D3; }
+MPa2: is rA2=0 { }
+MPa2: is rA2=1 { mult_addr = mult_addr - 4; *mult_addr = A2; }
+MPa3: is rA3=0 { }
+MPa3: is rA3=1 { mult_addr = mult_addr - 4; *mult_addr = A3; }
+MPot: is rOther=0 { }
+MPot: is rOther=1 { mult_addr = mult_addr - 4; *mult_addr = D0; mult_addr = mult_addr - 4; *mult_addr = D1;
+                    mult_addr = mult_addr - 4; *mult_addr = A0; mult_addr = mult_addr - 4; *mult_addr = A1;
+                    mult_addr = mult_addr - 4; *mult_addr = MDR; mult_addr = mult_addr - 4; *mult_addr = LIR;
+                    mult_addr = mult_addr - 4; *mult_addr = LAR; mult_addr = mult_addr - 4; }
+MovmPush: is MPx0 & MPx1 & MPx2 & MPd2 & MPd3 & MPa2 & MPa3 & MPot
+  { build MPx0; build MPx1; build MPx2; build MPd2; build MPd3; build MPa2; build MPa3; build MPot; }
+
+MOx0: is rEx0=0 { }
+MOx0: is rEx0=1 { R3 = *mult_addr; mult_addr = mult_addr + 4; R2 = *mult_addr; mult_addr = mult_addr + 4; }
+MOx1: is rEx1=0 { }
+MOx1: is rEx1=1 { R7 = *mult_addr; mult_addr = mult_addr + 4; R6 = *mult_addr; mult_addr = mult_addr + 4;
+                  R5 = *mult_addr; mult_addr = mult_addr + 4; R4 = *mult_addr; mult_addr = mult_addr + 4; }
+MOx2: is rEx2=0 { }
+MOx2: is rEx2=1 { mult_addr = mult_addr + 16; R1 = *mult_addr; mult_addr = mult_addr + 4; R0 = *mult_addr; mult_addr = mult_addr + 4; }
+MOd2: is rD2=0 { }
+MOd2: is rD2=1 { D2 = *mult_addr; mult_addr = mult_addr + 4; }
+MOd3: is rD3=0 { }
+MOd3: is rD3=1 { D3 = *mult_addr; mult_addr = mult_addr + 4; }
+MOa2: is rA2=0 { }
+MOa2: is rA2=1 { A2 = *mult_addr; mult_addr = mult_addr + 4; }
+MOa3: is rA3=0 { }
+MOa3: is rA3=1 { A3 = *mult_addr; mult_addr = mult_addr + 4; }
+MOot: is rOther=0 { }
+MOot: is rOther=1 { mult_addr = mult_addr + 4; LAR = *mult_addr; mult_addr = mult_addr + 4; LIR = *mult_addr; mult_addr = mult_addr + 4;
+                    MDR = *mult_addr; mult_addr = mult_addr + 4; A1 = *mult_addr; mult_addr = mult_addr + 4;
+                    A0 = *mult_addr; mult_addr = mult_addr + 4; D1 = *mult_addr; mult_addr = mult_addr + 4;
+                    D0 = *mult_addr; mult_addr = mult_addr + 4; }
+MovmPop: is MOx0 & MOx1 & MOx2 & MOd2 & MOd3 & MOa2 & MOa3 & MOot
+  { build MOot; build MOa3; build MOa2; build MOd3; build MOd2; build MOx2; build MOx1; build MOx0; }
+
 
 
 
@@ -493,8 +464,8 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOVHU Dm, (IMM16) 		is entryfix=0 & op4=0x0 & Dm & op2n=3; IMM16 			{ local addr:4 = zext(IMM16); *:2 addr = Dm:2; }
 :MOVHU Dm, (IMM32) 		is entryfix=0 & op8=0xFC; op4=0x8 & Dm & op2n=3; IMM32 	{ *:2 IMM32 = Dm:2; }
 
-:MOVM ("SP"), RegsBrace 	is entryfix=0 & op8=0xce; RegsBrace & rD2 & rD3 & rA2 & rA3 & rOther & rEx0 & rEx1 & rEx2	{ mult_addr = SP; movm_pop(rD2:1,rD3:1,rA2:1,rA3:1,rOther:1,rEx0:1,rEx1:1,rEx2:1); SP = mult_addr; }
-:MOVM RegsBrace, ("SP") 	is entryfix=0 & op8=0xcf; RegsBrace & rD2 & rD3 & rA2 & rA3 & rOther & rEx0 & rEx1 & rEx2	{ mult_addr = SP; movm_push(rD2:1,rD3:1,rA2:1,rA3:1,rOther:1,rEx0:1,rEx1:1,rEx2:1); SP = mult_addr; }
+:MOVM ("SP"), RegsBrace 	is entryfix=0 & op8=0xce; RegsBrace & MovmPop	{ mult_addr = SP; build MovmPop; SP = mult_addr; }
+:MOVM RegsBrace, ("SP") 	is entryfix=0 & op8=0xcf; RegsBrace & MovmPush	{ mult_addr = SP; build MovmPush; SP = mult_addr; }
 
 :EXT Dn0 		is entryfix=0 & op8=0xF2; op4=0xd & op2m=0 & Dn0 	{ MDR = Dn0 s>> 31; }
 # 2026-10-11: EXTB/EXTH were wrong (EXTB wrote MDR, EXTH zeroed every positive value and tested bit 31) -> plain sign-extends
@@ -628,19 +599,13 @@ macro update_sub(a, b) {
 	# GNU sim: 64-bit dividend MDR:Dn; quotient -> Dn, remainder -> MDR. Divide by zero: V=1, Dn=0xff, MDR=Dn (low word of dividend).
 	local r:8 = (zext(MDR) << 32) | zext(Dn0);
 	local den:8 = sext(Dm1);
-	local zero:1 = (Dm1 == 0);
-	if (zero) goto <dz>;
+	# Divide by zero (sim: V=1, Dn=0xff, MDR=dividend low) is deliberately NOT modelled as a p-code branch:
+	# a branch here put an "if (divisor==0)" arm into every division in the decompile. Only V reports it.
 	local q:8 = r s/ den;
 	local rem:8 = r s% den;
 	Dn0 = q:4;
 	MDR = rem:4;
-	$(VF) = 0;
-	goto <done>;
-	<dz>
-	MDR = r:4;
-	Dn0 = 0xff;
-	$(VF) = 1;
-	<done>
+	$(VF) = (Dm1 == 0);
 	$(ZF) = (Dn0 == 0);
 	$(NF) = Dn0 s< 0;
 	$(CF) = 0;
@@ -649,19 +614,13 @@ macro update_sub(a, b) {
 {
 	local r:8 = (zext(MDR) << 32) | zext(Dn0);
 	local den:8 = zext(Dm1);
-	local zero:1 = (Dm1 == 0);
-	if (zero) goto <dz>;
+	# Divide by zero (sim: V=1, Dn=0xff, MDR=dividend low) is deliberately NOT modelled as a p-code branch:
+	# a branch here put an "if (divisor==0)" arm into every division in the decompile. Only V reports it.
 	local q:8 = r / den;
 	local rem:8 = r % den;
 	Dn0 = q:4;
 	MDR = rem:4;
-	$(VF) = 0;
-	goto <done>;
-	<dz>
-	MDR = r:4;
-	Dn0 = 0xff;
-	$(VF) = 1;
-	<done>
+	$(VF) = (Dm1 == 0);
 	$(ZF) = (Dn0 == 0);
 	$(NF) = Dn0 s< 0;
 	$(CF) = 0;

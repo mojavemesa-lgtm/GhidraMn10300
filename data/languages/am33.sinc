@@ -156,8 +156,8 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 :MOVHU Rm2, (IMM32) 		is entryfix=0 & op8=0xfe; op8=0x5e; Rm2 & op4l=0; IMM32  	{ *:2 IMM32 = Rm2:2; }
 
 
-:MOVM ("USP"), RegsBrace 	is entryfix=0 & op8=0xf8; op8=0xce; RegsBrace & rD2 & rD3 & rA2 & rA3 & rOther & rEx0 & rEx1 & rEx2 { mult_addr = USP; movm_pop(rD2:1,rD3:1,rA2:1,rA3:1,rOther:1,rEx0:1,rEx1:1,rEx2:1); USP = mult_addr; }
-:MOVM RegsBrace, ("USP")		is entryfix=0 & op8=0xf8; op8=0xcf; RegsBrace & rD2 & rD3 & rA2 & rA3 & rOther & rEx0 & rEx1 & rEx2 { mult_addr = USP; movm_push(rD2:1,rD3:1,rA2:1,rA3:1,rOther:1,rEx0:1,rEx1:1,rEx2:1); USP = mult_addr; }
+:MOVM ("USP"), RegsBrace 	is entryfix=0 & op8=0xf8; op8=0xce; RegsBrace & MovmPop { mult_addr = USP; build MovmPop; USP = mult_addr; }
+:MOVM RegsBrace, ("USP")		is entryfix=0 & op8=0xf8; op8=0xcf; RegsBrace & MovmPush { mult_addr = USP; build MovmPush; USP = mult_addr; }
 
 
 :EXT Rn0 		is entryfix=0 & op8=0xf9; op8=0x18; Rm2 & Rn0 & op4=op4l { MDR = Rn0 s>> 31; }
@@ -231,19 +231,13 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 	# GNU sim: 64-bit dividend MDR:Rn; quotient -> Rn, remainder -> MDR, C and V cleared. Divide by zero (the sim itself crashes): treated like the base ISA, V=1, Rn=0xff, MDR=low word of dividend.
 	local r:8 = (zext(MDR) << 32) | zext(Rn0);
 	local den:8 = sext(Rm2);
-	local zero:1 = (Rm2 == 0);
-	if (zero) goto <dz>;
+	# Divide by zero (sim: V=1, Dn=0xff, MDR=dividend low) is deliberately NOT modelled as a p-code branch:
+	# a branch here put an "if (divisor==0)" arm into every division in the decompile. Only V reports it.
 	local q:8 = r s/ den;
 	local rem:8 = r s% den;
 	Rn0 = q:4;
 	MDR = rem:4;
-	$(VF) = 0;
-	goto <done>;
-	<dz>
-	MDR = r:4;
-	Rn0 = 0xff;
-	$(VF) = 1;
-	<done>
+	$(VF) = (Rm2 == 0);
 	$(ZF) = (Rn0 == 0);
 	$(NF) = Rn0 s< 0;
 	$(CF) = 0;
@@ -254,19 +248,13 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 	# GNU sim: 64-bit dividend MDR:Rn; quotient -> Rn, remainder -> MDR, C and V cleared. Divide by zero (the sim itself crashes): treated like the base ISA, V=1, Rn=0xff, MDR=low word of dividend.
 	local r:8 = (zext(MDR) << 32) | zext(Rn0);
 	local den:8 = zext(Rm2);
-	local zero:1 = (Rm2 == 0);
-	if (zero) goto <dz>;
+	# Divide by zero (sim: V=1, Dn=0xff, MDR=dividend low) is deliberately NOT modelled as a p-code branch:
+	# a branch here put an "if (divisor==0)" arm into every division in the decompile. Only V reports it.
 	local q:8 = r / den;
 	local rem:8 = r % den;
 	Rn0 = q:4;
 	MDR = rem:4;
-	$(VF) = 0;
-	goto <done>;
-	<dz>
-	MDR = r:4;
-	Rn0 = 0xff;
-	$(VF) = 1;
-	<done>
+	$(VF) = (Rm2 == 0);
 	$(ZF) = (Rn0 == 0);
 	$(NF) = Rn0 s< 0;
 	$(CF) = 0;
