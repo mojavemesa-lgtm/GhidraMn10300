@@ -15,6 +15,7 @@ define register offset=0xA0 size=1 [ ZF NF CF VF ];
 define register offset=0x60 size=4 [ MDRQ MCRH MCRL MCVF ]; 
 
 define register offset=0x80 size=4 [ mult_addr ];
+define register offset=0x150 size=4 [ R0 R1 R2 R3 R4 R5 R6 R7 ];
 
 # Panasonic CALL d,[regs],imm allocates the CALLEE's frame at the call site. To give the decompiler
 # a fixed entry SP (return address at 0, stack args from 4), CALL no longer moves SP; instead the
@@ -192,58 +193,120 @@ attach variables [ Dn0 Dn1 Dn2  Dm0 Dm1 Dm2  Di0 Di1 Di2 ] [ D0 D1 D2 D3 ];
 # Meanings
 
 # TODO: this is inverse? maybe its bottom up?
-PushRegsList8: "" 						is rEx2=0 					{ }
-PushRegsList8: "EX2" 					is rEx2=1 					{ mult_addr = mult_addr - 0x18; }  # TODO: E0, E1, MDRQ, MCRH MCRL MCVF
-PushRegsList7: PushRegsList8 			is PushRegsList8 & rEx1=0 	{ }
-PushRegsList7: "EX1" 					is rEx1=1 & r00=0 			{ mult_addr = mult_addr - 0x10; } # TODO: E4, E5, E6, E7
-PushRegsList7: "EX1",PushRegsList8 		is PushRegsList8 & rEx1=1 	{ mult_addr = mult_addr - 0x10; }
-PushRegsList6: PushRegsList7 			is PushRegsList7 & rEx0=0 	{ }
-PushRegsList6: "EX0" 					is rEx0=1 & r01=0 			{ mult_addr = mult_addr - 8; } # TODO: E2, E3
-PushRegsList6: "EX0",PushRegsList7 		is PushRegsList7 & rEx0=1 	{ mult_addr = mult_addr - 8; }
-PushRegsList5: PushRegsList6 			is PushRegsList6 & rOther=0 { }
-PushRegsList5: "OTHER" 					is rOther=1 & r02=0 		{ mult_addr = mult_addr - 4*7; *(mult_addr + 4*6) = D0; *(mult_addr + 4*5) = D1; *(mult_addr + 4*4) = A0; *(mult_addr + 4*3) = A1; *(mult_addr + 4*2) = MDR; *(mult_addr + 4*1) = LIR; *(mult_addr + 4*0) = LAR; }
-PushRegsList5: "OTHER",PushRegsList6 	is PushRegsList6 & rOther=1 { mult_addr = mult_addr - 4*7; *(mult_addr + 4*6) = D0; *(mult_addr + 4*5) = D1; *(mult_addr + 4*4) = A0; *(mult_addr + 4*3) = A1; *(mult_addr + 4*2) = MDR; *(mult_addr + 4*1) = LIR; *(mult_addr + 4*0) = LAR; }
-PushRegsList4: PushRegsList5 			is PushRegsList5 & rA3=0 	{ }
-PushRegsList4: "A3" 					is rA3=1 & r03=0 			{ mult_addr = mult_addr - 4; *mult_addr = A3; }
-PushRegsList4: "A3",PushRegsList5 		is PushRegsList5 & rA3=1 	{ mult_addr = mult_addr - 4; *mult_addr = A3; }
-PushRegsList3: PushRegsList4 			is PushRegsList4 & rA2=0	{ }
-PushRegsList3: "A2" 					is rA2=1 & r04=0 			{ mult_addr = mult_addr - 4; *mult_addr = A2; }
-PushRegsList3: "A2",PushRegsList4 		is PushRegsList4 & rA2=1 	{ mult_addr = mult_addr - 4; *mult_addr = A2; }
-PushRegsList2: PushRegsList3 			is PushRegsList3 & rD3=0	{ }
-PushRegsList2: "D3" 					is rD3=1 & r05=0 			{ mult_addr = mult_addr - 4; *mult_addr = D3; }
-PushRegsList2: "D3",PushRegsList3 		is PushRegsList3 & rD3=1 	{ mult_addr = mult_addr - 4; *mult_addr = D3; }
-PushRegsList1: PushRegsList2 			is PushRegsList2 & rD2=0 	{ }
-PushRegsList1: "D2" 					is rD2=1 & r06=0 			{ mult_addr = mult_addr - 4; *mult_addr = D2; }
-PushRegsList1: "D2",PushRegsList2 		is PushRegsList2 & rD2=1 	{ mult_addr = mult_addr - 4; *mult_addr = D2; }
+
+macro movm_push(d2,d3,a2,a3,ot,x0,x1,x2) {
+  if (x0 == 0:1) goto <e0>;
+  mult_addr = mult_addr - 4; *mult_addr = R2;
+  mult_addr = mult_addr - 4; *mult_addr = R3;
+  <e0>
+  if (x1 == 0:1) goto <e1>;
+  mult_addr = mult_addr - 4; *mult_addr = R4;
+  mult_addr = mult_addr - 4; *mult_addr = R5;
+  mult_addr = mult_addr - 4; *mult_addr = R6;
+  mult_addr = mult_addr - 4; *mult_addr = R7;
+  <e1>
+  if (x2 == 0:1) goto <e2>;
+  mult_addr = mult_addr - 4; *mult_addr = R0;
+  mult_addr = mult_addr - 4; *mult_addr = R1;
+  mult_addr = mult_addr - 16;
+  <e2>
+  if (d2 == 0:1) goto <l1>;
+  mult_addr = mult_addr - 4; *mult_addr = D2;
+  <l1>
+  if (d3 == 0:1) goto <l2>;
+  mult_addr = mult_addr - 4; *mult_addr = D3;
+  <l2>
+  if (a2 == 0:1) goto <l3>;
+  mult_addr = mult_addr - 4; *mult_addr = A2;
+  <l3>
+  if (a3 == 0:1) goto <l4>;
+  mult_addr = mult_addr - 4; *mult_addr = A3;
+  <l4>
+  if (ot == 0:1) goto <l5>;
+  mult_addr = mult_addr - 4; *mult_addr = D0;
+  mult_addr = mult_addr - 4; *mult_addr = D1;
+  mult_addr = mult_addr - 4; *mult_addr = A0;
+  mult_addr = mult_addr - 4; *mult_addr = A1;
+  mult_addr = mult_addr - 4; *mult_addr = MDR;
+  mult_addr = mult_addr - 4; *mult_addr = LIR;
+  mult_addr = mult_addr - 4; *mult_addr = LAR;
+  mult_addr = mult_addr - 4;
+  <l5>
+}
+
+macro movm_pop(d2,d3,a2,a3,ot,x0,x1,x2) {
+  if (ot == 0:1) goto <l5>;
+  mult_addr = mult_addr + 4;
+  LAR = *mult_addr; mult_addr = mult_addr + 4;
+  LIR = *mult_addr; mult_addr = mult_addr + 4;
+  MDR = *mult_addr; mult_addr = mult_addr + 4;
+  A1 = *mult_addr; mult_addr = mult_addr + 4;
+  A0 = *mult_addr; mult_addr = mult_addr + 4;
+  D1 = *mult_addr; mult_addr = mult_addr + 4;
+  D0 = *mult_addr; mult_addr = mult_addr + 4;
+  <l5>
+  if (a3 == 0:1) goto <l4>;
+  A3 = *mult_addr; mult_addr = mult_addr + 4;
+  <l4>
+  if (a2 == 0:1) goto <l3>;
+  A2 = *mult_addr; mult_addr = mult_addr + 4;
+  <l3>
+  if (d3 == 0:1) goto <l2>;
+  D3 = *mult_addr; mult_addr = mult_addr + 4;
+  <l2>
+  if (d2 == 0:1) goto <l1>;
+  D2 = *mult_addr; mult_addr = mult_addr + 4;
+  <l1>
+  if (x2 == 0:1) goto <e2>;
+  mult_addr = mult_addr + 16;
+  R1 = *mult_addr; mult_addr = mult_addr + 4;
+  R0 = *mult_addr; mult_addr = mult_addr + 4;
+  <e2>
+  if (x1 == 0:1) goto <e1>;
+  R7 = *mult_addr; mult_addr = mult_addr + 4;
+  R6 = *mult_addr; mult_addr = mult_addr + 4;
+  R5 = *mult_addr; mult_addr = mult_addr + 4;
+  R4 = *mult_addr; mult_addr = mult_addr + 4;
+  <e1>
+  if (x0 == 0:1) goto <e0>;
+  R3 = *mult_addr; mult_addr = mult_addr + 4;
+  R2 = *mult_addr; mult_addr = mult_addr + 4;
+  <e0>
+}
+
+# MOVM register list. The list below is DISPLAY ONLY (D2,D3,A2,A3,OTHER,EX0,EX1,EX2 like binutils); the stores and loads are
+# done by the macros movm_push / movm_pop in the order the GNU simulator (mn10300.igen movm) uses, checked against the sim in
+# the differential harness (movm families). Layout, highest address first: EX0 (R2,R3), EX1 (R4..R7), EX2 (R0,R1 + 16 reserved
+# bytes for MDRQ/MCRH/MCRL/MCVF, not modelled: the sim does not save them either), D2, D3, A2, A3, OTHER (D0,D1,A0,A1,MDR,LIR,LAR + 1 reserved word).
+
+RegsList8: "" is rEx2=0 { }
+RegsList8: "EX2" is rEx2=1 { }
+RegsList7: RegsList8 is RegsList8 & rEx1=0 { }
+RegsList7: "EX1" is rEx1=1 & r00=0 { }
+RegsList7: "EX1",RegsList8 is RegsList8 & rEx1=1 { }
+RegsList6: RegsList7 is RegsList7 & rEx0=0 { }
+RegsList6: "EX0" is rEx0=1 & r01=0 { }
+RegsList6: "EX0",RegsList7 is RegsList7 & rEx0=1 { }
+RegsList5: RegsList6 is RegsList6 & rOther=0 { }
+RegsList5: "OTHER" is rOther=1 & r02=0 { }
+RegsList5: "OTHER",RegsList6 is RegsList6 & rOther=1 { }
+RegsList4: RegsList5 is RegsList5 & rA3=0 { }
+RegsList4: "A3" is rA3=1 & r03=0 { }
+RegsList4: "A3",RegsList5 is RegsList5 & rA3=1 { }
+RegsList3: RegsList4 is RegsList4 & rA2=0 { }
+RegsList3: "A2" is rA2=1 & r04=0 { }
+RegsList3: "A2",RegsList4 is RegsList4 & rA2=1 { }
+RegsList2: RegsList3 is RegsList3 & rD3=0 { }
+RegsList2: "D3" is rD3=1 & r05=0 { }
+RegsList2: "D3",RegsList3 is RegsList3 & rD3=1 { }
+RegsList1: RegsList2 is RegsList2 & rD2=0 { }
+RegsList1: "D2" is rD2=1 & r06=0 { }
+RegsList1: "D2",RegsList2 is RegsList2 & rD2=1 { }
+RegsBrace: [RegsList1] is RegsList1 { }
 
 
 
-PopRegsList8: "" 						is rD2=0 					{ }
-PopRegsList8: "D2" 						is rD2=1 					{ D2 = *mult_addr; mult_addr = mult_addr + 4; }
-PopRegsList7: PopRegsList8 				is PopRegsList8 & rD3=0 	{ }
-PopRegsList7: "D3" 						is rD3=1 & r77=0 			{ D3 = *mult_addr; mult_addr = mult_addr + 4; }
-PopRegsList7: "D3",PopRegsList8 		is PopRegsList8 & rD3=1 	{ D3 = *mult_addr; mult_addr = mult_addr + 4; }
-PopRegsList6: PopRegsList7 				is PopRegsList7 & rA2=0 	{ }
-PopRegsList6: "A2" 						is rA2=1 & r67=0 			{ A2 = *mult_addr; mult_addr = mult_addr + 4; }
-PopRegsList6: "A2",PopRegsList7 		is PopRegsList7 & rA2=1 	{ A2 = *mult_addr; mult_addr = mult_addr + 4; }
-PopRegsList5: PopRegsList6 				is PopRegsList6 & rA3=0 	{ }
-PopRegsList5: "A3" 						is rA3=1 & r57=0 			{ A3 = *mult_addr; mult_addr = mult_addr + 4; }
-PopRegsList5: "A3",PopRegsList6 		is PopRegsList6 & rA3=1 	{ A3 = *mult_addr; mult_addr = mult_addr + 4; }
-PopRegsList4: PopRegsList5 				is PopRegsList5 & rOther=0 	{ }
-PopRegsList4: "OTHER" 					is rOther=1 & r47=0 		{ LAR = *(mult_addr + 4*0); LIR = *(mult_addr + 4*1); MDR = *(mult_addr + 4*2); A1  = *(mult_addr + 4*3); A0  = *(mult_addr + 4*4); D1  = *(mult_addr + 4*5); D0  = *(mult_addr + 4*6); mult_addr = mult_addr + 4*7; }
-PopRegsList4: "OTHER",PopRegsList5 		is PopRegsList5 & rOther=1 	{ LAR = *(mult_addr + 4*0); LIR = *(mult_addr + 4*1); MDR = *(mult_addr + 4*2); A1  = *(mult_addr + 4*3); A0  = *(mult_addr + 4*4); D1  = *(mult_addr + 4*5); D0  = *(mult_addr + 4*6); mult_addr = mult_addr + 4*7; }
-PopRegsList3: PopRegsList4 				is PopRegsList4 & rEx0=0	{ }
-PopRegsList3: "EX0" 					is rEx0=1 & r37=0 			{ mult_addr = mult_addr + 8; }
-PopRegsList3: "EX0",PopRegsList4 		is PopRegsList4 & rEx0=1 	{ mult_addr = mult_addr + 8; }
-PopRegsList2: PopRegsList3 				is PopRegsList3 & rEx1=0	{ }
-PopRegsList2: "EX1" 					is rEx1=1 & r27=0 			{ mult_addr = mult_addr + 0x10; }
-PopRegsList2: "EX1",PopRegsList3 		is PopRegsList3 & rEx1=1 	{ mult_addr = mult_addr + 0x10; }
-PopRegsList1: PopRegsList2 				is PopRegsList2 & rEx2=0 	{ }
-PopRegsList1: "EX2" 					is rEx2=1 & r17=0 			{ mult_addr = mult_addr + 8; }
-PopRegsList1: "EX2",PopRegsList2 		is PopRegsList2 & rEx2=1 	{ mult_addr = mult_addr + 8; }
 
-RegsBrace: [PushRegsList1]	is PushRegsList1 	{ }
-PopRegsBrace: [PopRegsList1]	is PopRegsList1 	{ }
 
 # Display-only copies (no p-code): CALL/RET show their register list, but the saves/restores are not
 # modelled (cspec marks D2,D3,A2,A3 unaffected instead).
@@ -315,7 +378,7 @@ D8rel:  reloc is d8 	[ reloc = inst_start + d8;  ] { export *[ram]:4 reloc; }
 D16rel: reloc is d16 	[ reloc = inst_start + d16; ] { export *[ram]:4 reloc; }
 D32rel: reloc is d32 	[ reloc = inst_start + d32; ] { export *[ram]:4 reloc; }
 
-ABS16: addr is d16 	{ export *[ram]:4 addr; }
+ABS16: addr is imm16 	{ local a:4 = zext(imm16:2); export *[ram]:4 a; }
 ABS32: addr is d32 	{ export *[ram]:4 addr; }
 
 # Data instructions
@@ -339,7 +402,7 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOV (Dm, An), Au 		is entryfix=0 & op8=0xF3; op2i=2 & Au & Dm & An  		{ Au = *(Dm + An); }
 :MOV (D8 , An), Dm 		is entryfix=0 & op8=0xF8; op4=0 & Dm & An; D8  			{ Dm = *(An + sext(D8)); }
 :MOV (D8, An), Am 		is entryfix=0 & op8=0xF8; op4=2 & Am & An; D8  			{ Am = *(An + sext(D8)); }
-:MOV (D8, An), "SP" 	is entryfix=0 & op8=0xF8; op4=0xf & op2m=0 & An; D8  	{ An = *(SP + sext(D8)); }
+:MOV (D8, An), "SP" 	is entryfix=0 & op8=0xF8; op4=0xf & op2m=0 & An; D8  	{ SP = *(An + sext(D8)); }
 :MOV (D16, An), Dm 		is entryfix=0 & op8=0xFA; op4=0 & Dm & An; D16  			{ Dm = *(An + sext(D16)); }
 :MOV (D16, "SP"), An 	is entryfix=0 & op8=0xFA; op4=0xb & op2m=0 & An; D16 	{ An = *(SP + zext(D16)); }
 :MOV (D16, "SP"), Dn 	is entryfix=0 & op8=0xFA; op4=0xb & op2m=1 & Dn; D16 	{ Dn = *(SP + zext(D16)); }
@@ -361,7 +424,7 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOV Au, (Dm, An) 		is entryfix=0 & op8=0xF3; op2i=3 & Au & Dm & An  		{ *(Dm + An) = Au; }
 :MOV Dm, (D8 , An) 		is entryfix=0 & op8=0xF8; op4=1 & Dm & An; D8  			{ *(An + sext(D8)) = Dm; }
 :MOV Am, (D8, An) 		is entryfix=0 & op8=0xF8; op4=3 & Am & An; D8  			{ *(An + sext(D8)) = Am; }
-:MOV "SP", (D8, An) 	is entryfix=0 & op8=0xF8; op4=0xf & op2m=1 & An; D8  	{ *(SP + sext(D8)) = SP; }
+:MOV "SP", (D8, An) 	is entryfix=0 & op8=0xF8; op4=0xf & op2m=1 & An; D8  	{ *(An + sext(D8)) = SP; }
 :MOV Dm, (D16, An) 		is entryfix=0 & op8=0xFA; op4=1 & Dm & An; D16  			{ *(An + sext(D16)) = Dm; }
 :MOV Am, (D16, An) 		is entryfix=0 & op8=0xFA; op4=3 & Am & An; D16  			{ *(An + sext(D16)) = Am; }
 :MOV Am, (IMM16) 		is entryfix=0 & op8=0xFA; op4=8 & Am & op2n=0; IMM16 	{ local addr:4 = zext(IMM16); *addr = Am; }
@@ -430,8 +493,8 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOVHU Dm, (IMM16) 		is entryfix=0 & op4=0x0 & Dm & op2n=3; IMM16 			{ local addr:4 = zext(IMM16); *:2 addr = Dm:2; }
 :MOVHU Dm, (IMM32) 		is entryfix=0 & op8=0xFC; op4=0x8 & Dm & op2n=3; IMM32 	{ *:2 IMM32 = Dm:2; }
 
-:MOVM ("SP"), PopRegsBrace 	is entryfix=0 & op8=0xce; PopRegsBrace  			{ mult_addr = SP; build PopRegsBrace; SP = mult_addr; }
-:MOVM RegsBrace, ("SP") 	is entryfix=0 & op8=0xcf; RegsBrace  			{ mult_addr = SP; build RegsBrace; SP = mult_addr; }
+:MOVM ("SP"), RegsBrace 	is entryfix=0 & op8=0xce; RegsBrace & rD2 & rD3 & rA2 & rA3 & rOther & rEx0 & rEx1 & rEx2	{ mult_addr = SP; movm_pop(rD2:1,rD3:1,rA2:1,rA3:1,rOther:1,rEx0:1,rEx1:1,rEx2:1); SP = mult_addr; }
+:MOVM RegsBrace, ("SP") 	is entryfix=0 & op8=0xcf; RegsBrace & rD2 & rD3 & rA2 & rA3 & rOther & rEx0 & rEx1 & rEx2	{ mult_addr = SP; movm_push(rD2:1,rD3:1,rA2:1,rA3:1,rOther:1,rEx0:1,rEx1:1,rEx2:1); SP = mult_addr; }
 
 :EXT Dn0 		is entryfix=0 & op8=0xF2; op4=0xd & op2m=0 & Dn0 	{ MDR = Dn0 s>> 31; }
 # 2026-10-11: EXTB/EXTH were wrong (EXTB wrote MDR, EXTH zeroed every positive value and tested bit 31) -> plain sign-extends
@@ -543,9 +606,9 @@ macro update_sub(a, b) {
 :ADD SIMM8, An0 	is entryfix=0 & op4=0x2 & op2m=0 & An0; SIMM8				{ update_add(An0, sext(SIMM8)); }
 :ADD SIMM16, An0 	is entryfix=0 & op8=0xFA; op4=0xd & op2m=0 & An0; SIMM16 	{ update_add(An0, sext(SIMM16)); }
 :ADD SIMM32, An0 	is entryfix=0 & op8=0xFc; op4=0xd & op2m=0 & An0; SIMM32 	{ update_add(An0, SIMM32); }
-:ADD SIMM8, "SP" 	is entryfix=0 & op8=0xF8; op8=0xFE; SIMM8					{ update_add(SP, sext(SIMM8)); }
-:ADD SIMM16, "SP" 	is entryfix=0 & op8=0xFA; op8=0xFE; SIMM16 					{ update_add(SP, sext(SIMM16)); }
-:ADD SIMM32, "SP" 	is entryfix=0 & op8=0xFC; op8=0xFE; SIMM32 					{ update_add(SP, SIMM32); }
+:ADD SIMM8, "SP" 	is entryfix=0 & op8=0xF8; op8=0xFE; SIMM8					{ SP = SP + sext(SIMM8); }
+:ADD SIMM16, "SP" 	is entryfix=0 & op8=0xFA; op8=0xFE; SIMM16 					{ SP = SP + sext(SIMM16); }
+:ADD SIMM32, "SP" 	is entryfix=0 & op8=0xFC; op8=0xFE; SIMM32 					{ SP = SP + SIMM32; }
 :ADDC Dm1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x4 & Dm1 & Dn0 				{ update_addc(Dn0, Dm1); }
 
 :SUB Dm1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x0 & Dm1 & Dn0 				{ update_sub(Dn0, Dm1); }
@@ -687,7 +750,7 @@ macro shift_zn(v) {
 :BNE D8rel 	is entryfix=0 & op8=0xc9; D8rel 				{ if ($(ZF) == 0) 						goto D8rel; }
 :BGT D8rel 	is entryfix=0 & op8=0xc1; D8rel 				{ if (($(ZF) | ($(NF) ^ $(VF))) == 0) 	goto D8rel; }
 :BGE D8rel 	is entryfix=0 & op8=0xc2; D8rel 				{ if (($(NF) ^ $(VF)) == 0) 			goto D8rel; }
-:BLE D8rel 	is entryfix=0 & op8=0xc3; D8rel 				{ if ($(ZF) | ($(NF) ^ $(VF)) == 1) 	goto D8rel;}
+:BLE D8rel 	is entryfix=0 & op8=0xc3; D8rel 				{ if (($(ZF) | ($(NF) ^ $(VF))) == 1) 	goto D8rel;}
 :BLT D8rel 	is entryfix=0 & op8=0xc0; D8rel 				{ if (($(NF) ^ $(VF)) == 1) 			goto D8rel; }
 :BHI D8rel 	is entryfix=0 & op8=0xc5; D8rel 				{ if (($(CF) | $(ZF)) == 0) 			goto D8rel; }
 :BCC D8rel 	is entryfix=0 & op8=0xc6; D8rel 				{ if ($(CF) == 0) 						goto D8rel; }
@@ -765,19 +828,19 @@ macro shift_zn(v) {
 # Only documented in igen? seems to be used for mn103 based cameras only? 
 # Only generated by their internal compiler probably?
 
-:GETX "MDRQ", Dn0 		is entryfix=0 & op8=0xf6; op4=0xf & Dm1    & Dn0			{ Dn0 = MDRQ; update_ZN_S32(Dn0); }
+:GETX "MDRQ", Dn0 		is entryfix=0 & op8=0xf6; op4=0xf & Dm1    & Dn0			{ Dn0 = MDRQ; update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
 # PUTX (f5 00..0f) is mn10300-core only in the GNU sim (mn10300.igen, not am33); on AM33 the same bytes are "mov A0,Rn" (am33.sinc). Disabled so AM33 decodes.
 #:PUTX Dn0, "MDRQ" 		is entryfix=0 & op8=0xf5; op4=0x0 & Dm1    & Dn0			{ MDRQ = Dn0; }
 
-:MULQ Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x0 & Dm1    & Dn0			{ local r:8=sext(Dm1)   *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQ SIMM8, Dn0 	is entryfix=0 & op8=0xf9; op4=0x0 & op2m=0 & Dn0; SIMM8	{ local r:8=sext(SIMM8) *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQ SIMM16, Dn0 is  entryfix=0 & op8=0xfb; op4=0x0 & op2m=0 & Dn0; SIMM16	{ local r:8=sext(SIMM16)*sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQ IMM32, Dn0 	is entryfix=0 & op8=0xfd; op4=0x0 & op2m=0 & Dn0; IMM32	{ local r:8=sext(IMM32) *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQ Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x0 & Dm1    & Dn0			{ local r:8=sext(Dm1)   *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
+:MULQ SIMM8, Dn0 	is entryfix=0 & op8=0xf9; op4=0x0 & op2m=0 & Dn0; SIMM8	{ local r:8=sext(SIMM8) *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
+:MULQ SIMM16, Dn0 is  entryfix=0 & op8=0xfb; op4=0x0 & op2m=0 & Dn0; SIMM16	{ local r:8=sext(SIMM16)*sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
+:MULQ IMM32, Dn0 	is entryfix=0 & op8=0xfd; op4=0x0 & op2m=0 & Dn0; IMM32	{ local r:8=sext(IMM32) *sext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
 
-:MULQU Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x1 & Dm1    & Dn0			{ local r:8=zext(Dm1)  *zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQU IMM8, Dn0 		is entryfix=0 & op8=0xf9; op4=0x1 & op2m=1 & Dn0; IMM8	{ local r:8=zext(IMM8) *zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQU IMM16, Dn0 		is entryfix=0 & op8=0xfb; op4=0x1 & op2m=1 & Dn0; IMM16	{ local r:8=zext(IMM16)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
-:MULQU IMM32, Dn0 		is entryfix=0 & op8=0xfd; op4=0x1 & op2m=1 & Dn0; IMM32	{ local r:8=zext(IMM32)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); }
+:MULQU Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x1 & Dm1    & Dn0			{ local r:8=zext(Dm1)  *zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
+:MULQU IMM8, Dn0 		is entryfix=0 & op8=0xf9; op4=0x1 & op2m=1 & Dn0; IMM8	{ local r:8=sext(IMM8) *zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
+:MULQU IMM16, Dn0 		is entryfix=0 & op8=0xfb; op4=0x1 & op2m=1 & Dn0; IMM16	{ local r:8=sext(IMM16)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
+:MULQU IMM32, Dn0 		is entryfix=0 & op8=0xfd; op4=0x1 & op2m=1 & Dn0; IMM32	{ local r:8=zext(IMM32)*zext(Dn0); Dn0=r:4; MDRQ=r(4); update_ZN_S32(Dn0); $(CF) = 0; $(VF) = 0; }
 
 :SAT16 Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x4 & Dm1    & Dn0			{ mn_todo(); }
 :SAT24 Dm1, Dn0 		is entryfix=0 & op8=0xf6; op4=0x5 & Dm1    & Dn0			{ mn_todo(); }

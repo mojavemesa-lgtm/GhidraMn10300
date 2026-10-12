@@ -6,7 +6,6 @@ define register offset=0x50 size=4 [ EPSW ];
 define register offset=0x100 size=4 [ USP SSP MSP ];
 define register offset=0x110 size=4 [ XR0 XR1 XR2 XR3 ];
 define register offset=0x130 size=4 [ RI ];
-define register offset=0x150 size=4 [ R0 R1 R2 R3 R4 R5 R6 R7 ];
 
 define register offset=0x200 size=4 [ 
 	fs0 fs1 fs2 fs3 
@@ -157,8 +156,8 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 :MOVHU Rm2, (IMM32) 		is entryfix=0 & op8=0xfe; op8=0x5e; Rm2 & op4l=0; IMM32  	{ *:2 IMM32 = Rm2:2; }
 
 
-:MOVM ("USP"), PopRegsBrace 	is entryfix=0 & op8=0xf8; op8=0xce; PopRegsBrace 	{ mult_addr = USP; build PopRegsBrace; USP = mult_addr; }
-:MOVM RegsBrace, ("USP")		is entryfix=0 & op8=0xf8; op8=0xcf; RegsBrace 		{ mult_addr = USP; build RegsBrace; USP = mult_addr; }
+:MOVM ("USP"), RegsBrace 	is entryfix=0 & op8=0xf8; op8=0xce; RegsBrace & rD2 & rD3 & rA2 & rA3 & rOther & rEx0 & rEx1 & rEx2 { mult_addr = USP; movm_pop(rD2:1,rD3:1,rA2:1,rA3:1,rOther:1,rEx0:1,rEx1:1,rEx2:1); USP = mult_addr; }
+:MOVM RegsBrace, ("USP")		is entryfix=0 & op8=0xf8; op8=0xcf; RegsBrace & rD2 & rD3 & rA2 & rA3 & rOther & rEx0 & rEx1 & rEx2 { mult_addr = USP; movm_push(rD2:1,rD3:1,rA2:1,rA3:1,rOther:1,rEx0:1,rEx1:1,rEx2:1); USP = mult_addr; }
 
 
 :EXT Rn0 		is entryfix=0 & op8=0xf9; op8=0x18; Rm2 & Rn0 & op4=op4l { MDR = Rn0 s>> 31; }
