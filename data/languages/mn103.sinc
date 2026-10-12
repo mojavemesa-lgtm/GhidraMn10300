@@ -1036,3 +1036,18 @@ define pcodeop udf;
 # :UDFU15 IMM32, Dn0 		is op8=0xfd; op4=0xf & op2m=1 & Dn0; IMM32	{ Dn0 = udfu(15:1, IMM32); }
 
 
+# --- Olympus soft-float helper opcodes (float values live in D0/D1; the f6 "user defined" slots) ---
+# UNVERIFIED: the GNU sim aborts on these, so the differential harness cannot check them. Meaning inferred from ~9,700 call sites in the
+# firmware's soft-float library at 0x600ef128-0x600ef350 (analysis/decode/sleigh_audit/E_am33b_fpu.md). Each constructor fixes the whole
+# second byte, so only these exact bytes are affected: f6 44 / f6 54 are therefore NOT sat16 / sat24 d1,d0 here (the sim says they are
+# sat16/sat24; the firmware says multiply/divide: the firmware wins for these two byte strings).
+:FADD "D1", "D0" is entryfix=0 & op8=0xf6; op8=0x24 { D0 = D0 f+ D1; }
+:FSUB "D1", "D0" is entryfix=0 & op8=0xf6; op8=0x34 { D0 = D0 f- D1; }
+:FMUL "D1", "D0" is entryfix=0 & op8=0xf6; op8=0x44 { D0 = D0 f* D1; }
+:FDIV "D1", "D0" is entryfix=0 & op8=0xf6; op8=0x54 { D0 = D0 f/ D1; }
+# compare D0 (x) with D1 (bound): the callers branch ble/bge/bgt/beq/bne; C = unordered (the caller at 0x600ef333 branches on bcs)
+:FCMP "D0", "D1" is entryfix=0 & op8=0xf6; op8=0x61
+{ $(ZF) = (D0 f== D1); $(NF) = (D0 f< D1); $(VF) = 0; $(CF) = nan(D0) || nan(D1); }
+# f9 e0 40 / fb e0 80 00: encodings the manual calls fadd fd4,fd0 / fadd fd8,fd0,fd0; this firmware only uses them as int<->float on D0
+:ITOF "D0"     is entryfix=0 & op8=0xf9; op8=0xe0; op8=0x40 { D0 = int2float(D0); }
+:FTOI "D0"     is entryfix=0 & op8=0xfb; op8=0xe0; op8=0x80; op8=0x00 { D0 = trunc(D0); }
