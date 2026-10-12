@@ -430,7 +430,7 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :EXTH Dn0 		is entryfix=0 & op4=0x1 & op2m=2 & Dn0 	{ Dn0 = sext(Dn0:2); }
 :EXTHU Dn0 		is entryfix=0 & op4=0x1 & op2m=3 & Dn0 	{ Dn0 = zext(Dn0:2); }
 
-:CLR Dn1 		is entryfix=0 & op4=0x0 & Dn1 & op2n=0 	{ Dn1 = 0; }
+:CLR Dn1 		is entryfix=0 & op4=0x0 & Dn1 & op2n=0 	{ Dn1 = 0; $(ZF) = 1; $(NF) = 0; $(CF) = 0; $(VF) = 0; }
 
 # Arithmetic calculation instructions
 
@@ -526,8 +526,8 @@ macro update_sub(a, b) {
 :SUBC Dm1, Dn0 		is entryfix=0 & op8=0xF1; op4=0x8 & Dm1 & Dn0 				{ update_subc(Dn0, Dm1); }
 
 
-:MUL Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x4 & Dm1 & Dn0 				{ local r:8=sext(Dm1)*sext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_S32(Dn0); }
-:MULU Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x5 & Dm1 & Dn0 				{ local r:8=zext(Dm1)*zext(Dn0); Dn0=r:4; MDR=r(4); update_ZN_S32(Dn0); }
+:MUL Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x4 & Dm1 & Dn0 				{ local r:8=sext(Dm1)*sext(Dn0); Dn0=r:4; MDR=r(4); update_logic(Dn0); }
+:MULU Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x5 & Dm1 & Dn0 				{ local r:8=zext(Dm1)*zext(Dn0); Dn0=r:4; MDR=r(4); update_logic(Dn0); }
 
 :DIV Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x6 & Dm1 & Dn0
 {
@@ -593,32 +593,32 @@ macro update_sub(a, b) {
 
 # Logical operation instructions
 
-:AND Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0 & Dm1 & Dn0 				{ Dn0 = Dm1 & Dn0; update_ZN_S32(Dn0); }
-:AND IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=0 & Dn0; IMM8	{ Dn0 = zext(IMM8) & Dn0; update_ZN_S32(Dn0); }
-:AND IMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xE & op2m=0 & Dn0; IMM16	{ Dn0 = zext(IMM16) & Dn0; update_ZN_S32(Dn0); }
-:AND IMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xE & op2m=0 & Dn0; IMM32	{ Dn0 = IMM32 & Dn0; update_ZN_S32(Dn0); }
+:AND Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0 & Dm1 & Dn0 				{ Dn0 = Dm1 & Dn0; update_logic(Dn0); }
+:AND IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=0 & Dn0; IMM8	{ Dn0 = zext(IMM8) & Dn0; update_logic(Dn0); }
+:AND IMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xE & op2m=0 & Dn0; IMM16	{ Dn0 = zext(IMM16) & Dn0; update_logic(Dn0); }
+:AND IMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xE & op2m=0 & Dn0; IMM32	{ Dn0 = IMM32 & Dn0; update_logic(Dn0); }
 :AND IMM16, "PSW" 	is entryfix=0 & op8=0xFA; op8=0xFC; IMM16				{ PSW = zext(IMM16) & PSW; }
 
-:OR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=1 & Dm1 & Dn0 				{ Dn0 = Dm1 | Dn0; update_ZN_S32(Dn0); }
-:OR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=1 & Dn0; IMM8	{ Dn0 = zext(IMM8) | Dn0; update_ZN_S32(Dn0); }
-:OR IMM16, Dn0 		is entryfix=0 & op8=0xFA; op4=0xE & op2m=1 & Dn0; IMM16	{ Dn0 = zext(IMM16) | Dn0; update_ZN_S32(Dn0); }
-:OR IMM32, Dn0 		is entryfix=0 & op8=0xFC; op4=0xE & op2m=1 & Dn0; IMM32	{ Dn0 = IMM32 | Dn0; update_ZN_S32(Dn0); }
+:OR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=1 & Dm1 & Dn0 				{ Dn0 = Dm1 | Dn0; update_logic(Dn0); }
+:OR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=1 & Dn0; IMM8	{ Dn0 = zext(IMM8) | Dn0; update_logic(Dn0); }
+:OR IMM16, Dn0 		is entryfix=0 & op8=0xFA; op4=0xE & op2m=1 & Dn0; IMM16	{ Dn0 = zext(IMM16) | Dn0; update_logic(Dn0); }
+:OR IMM32, Dn0 		is entryfix=0 & op8=0xFC; op4=0xE & op2m=1 & Dn0; IMM32	{ Dn0 = IMM32 | Dn0; update_logic(Dn0); }
 :OR IMM16, "PSW" 	is entryfix=0 & op8=0xFA; op8=0xFD; IMM16				{ PSW = zext(IMM16) | PSW; }
 
-:XOR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=2 & Dm1 & Dn0 				{ Dn0 = Dm1 ^ Dn0; update_ZN_S32(Dn0); }
-:XOR IMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xE & op2m=2 & Dn0; IMM16	{ Dn0 = zext(IMM16) ^ Dn0; update_ZN_S32(Dn0); }
-:XOR IMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xE & op2m=2 & Dn0; IMM32	{ Dn0 = IMM32 ^ Dn0; update_ZN_S32(Dn0); }
+:XOR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=2 & Dm1 & Dn0 				{ Dn0 = Dm1 ^ Dn0; update_logic(Dn0); }
+:XOR IMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xE & op2m=2 & Dn0; IMM16	{ Dn0 = zext(IMM16) ^ Dn0; update_logic(Dn0); }
+:XOR IMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xE & op2m=2 & Dn0; IMM32	{ Dn0 = IMM32 ^ Dn0; update_logic(Dn0); }
 
 :NOT Dn0 			is entryfix=0 & op8=0xF2; op4=3 & op2m=0 & Dn0 				{ Dn0 = ~Dn0; update_logic(Dn0); }
 
 # bit instructions
 
-:BTST IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=3 & Dn0; IMM8	{ update_ZN_S32(zext(IMM8) & Dn0); }
-:BTST IMM16, Dn0 		is entryfix=0 & op8=0xFA; op4=0xE & op2m=3 & Dn0; IMM16	{ update_ZN_S32(zext(IMM16) & Dn0); }
-:BTST IMM32, Dn0 		is entryfix=0 & op8=0xFC; op4=0xE & op2m=3 & Dn0; IMM32	{ update_ZN_S32(IMM32 & Dn0); }
-:BTST IMM8, (D8, An0) 	is entryfix=0 & op8=0xFA; op4=0xf & op2m=2 & An0; D8; IMM8 	{ local addr:4 = (zext(D8) + An0); 	$(ZF) = ((*:1 addr) & IMM8) == 0; }
-:BTST IMM8, (IMM16) 	is entryfix=0 & op8=0xFE; op8=0x82; IMM16; IMM8 				{ local addr:4 = zext(IMM16); 		$(ZF) = ((*:1 addr) & IMM8) == 0; }
-:BTST IMM8, (IMM32) 	is entryfix=0 & op8=0xFE; op8=0x02; IMM32; IMM8 				{ local addr:4 = IMM32; 			$(ZF) = ((*:1 addr) & IMM8) == 0; }
+:BTST IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=3 & Dn0; IMM8	{ update_logic(zext(IMM8) & Dn0); }
+:BTST IMM16, Dn0 		is entryfix=0 & op8=0xFA; op4=0xE & op2m=3 & Dn0; IMM16	{ update_logic(zext(IMM16) & Dn0); }
+:BTST IMM32, Dn0 		is entryfix=0 & op8=0xFC; op4=0xE & op2m=3 & Dn0; IMM32	{ update_logic(IMM32 & Dn0); }
+:BTST IMM8, (D8, An0) 	is entryfix=0 & op8=0xFA; op4=0xf & op2m=2 & An0; D8; IMM8 	{ local addr:4 = (An0 + sext(D8)); 	local t:1 = (*:1 addr) & IMM8; local tv:4 = zext(t); update_logic(tv); }
+:BTST IMM8, (IMM16) 	is entryfix=0 & op8=0xFE; op8=0x82; IMM16; IMM8 				{ local addr:4 = zext(IMM16); 		local t:1 = (*:1 addr) & IMM8; local tv:4 = zext(t); update_logic(tv); }
+:BTST IMM8, (IMM32) 	is entryfix=0 & op8=0xFE; op8=0x02; IMM32; IMM8 				{ local addr:4 = IMM32; 			local t:1 = (*:1 addr) & IMM8; local tv:4 = zext(t); update_logic(tv); }
 
 :BSET Dm1, (An0) 		is entryfix=0 & op8=0xF0; op4=0x8 & Dm1 & An0					{ local temp:1 = (*:1 An0); 		 local z:1 = (temp & Dm1:1) == 0; *:1 An0 = (temp | Dm1:1); update_bitop(z); }
 :BSET IMM8, (D8, An0) 	is entryfix=0 & op8=0xFA; op4=0xf & op2m=0 & An0; D8; IMM8		{ local addr:4 = (An0 + sext(D8)); 	local temp:1 = *:1 addr; local z:1 = (temp & IMM8) == 0; *:1 addr = (temp | IMM8); update_bitop(z); }
@@ -630,18 +630,21 @@ macro update_sub(a, b) {
 :BCLR IMM8, (IMM16) 	is entryfix=0 & op8=0xFE; op8=0x81; IMM16; IMM8					{ local addr:4 = zext(IMM16); 		local temp:1 = *:1 addr; local z:1 = (temp & IMM8) == 0; *:1 addr = (temp & ~IMM8); update_bitop(z); }
 :BCLR IMM8, (IMM32) 	is entryfix=0 & op8=0xFE; op8=0x01; IMM32; IMM8					{ local temp:1 = (*:1  IMM32); 			 local z:1 = (temp & IMM8) == 0; *:1 IMM32 = (temp & ~IMM8); update_bitop(z); }
 
-# shifters
+# shifters (GNU sim: Z,N from the result; ASR/LSR C = bit 0 of the OLD value (sim, not last bit shifted out); V untouched; ASL leaves C and V untouched)
+macro shift_zn(v) {
+	$(ZF) = (v == 0);
+	$(NF) = v s< 0;
+}
 
-:ASR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0xb & Dm1 & Dn0 				{ local mask:1 = (Dm1 & 0x1f) != 0;  $(CF) = ($(CF) & ~mask) | (Dm1:1 & mask);  Dn0 = sext(Dn0 s>> (Dm1 & 0x1f));  update_ZN_S32(Dn0); }
-:ASR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=2 & Dn0; IMM8 		{ local mask:1 = (IMM8 & 0x1f) != 0; $(CF) = ($(CF) & ~mask) | (IMM8 & mask); Dn0 = sext(Dn0 s>> (IMM8 & 0x1f)); update_ZN_S32(Dn0); }
+:ASR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0xb & Dm1 & Dn0 				{ $(CF) = (Dn0 & 1) != 0; Dn0 = Dn0 s>> (Dm1 & 0x1f); shift_zn(Dn0); }
+:ASR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=2 & Dn0; IMM8 		{ $(CF) = (Dn0 & 1) != 0; Dn0 = Dn0 s>> (IMM8 & 0x1f); shift_zn(Dn0); }
 
-:LSR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0xa & Dm1 & Dn0 				{ local mask:1 = (Dm1 & 0x1f) != 0;  $(CF) = ($(CF) & ~mask) | (Dm1:1 & mask);  Dn0 = zext(Dn0 >> (Dm1 & 0x1f));  update_ZN_S32(Dn0); } # TODO: flags
-:LSR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=1 & Dn0; IMM8 		{ local mask:1 = (IMM8 & 0x1f) != 0; $(CF) = ($(CF) & ~mask) | (IMM8 & mask); Dn0 = zext(Dn0 >> (IMM8 & 0x1f)); update_ZN_S32(Dn0); } # TODO: flags
+:LSR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0xa & Dm1 & Dn0 				{ $(CF) = (Dn0 & 1) != 0; Dn0 = Dn0 >> (Dm1 & 0x1f); shift_zn(Dn0); }
+:LSR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=1 & Dn0; IMM8 		{ $(CF) = (Dn0 & 1) != 0; Dn0 = Dn0 >> (IMM8 & 0x1f); shift_zn(Dn0); }
 
-
-:ASL Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x9 & Dm1 & Dn0 				{ Dn0 = Dn0 << (Dm1 & 0x1f); }
-:ASL IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=0 & Dn0; IMM8 		{ Dn0 = Dn0 << (IMM8 & 0x1f); }
-:ASL2 Dn0 			is entryfix=0 & op4=0x5 & op2m=1 & Dn0 						{ Dn0 = (Dn0 << 2); }
+:ASL Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=0x9 & Dm1 & Dn0 				{ Dn0 = Dn0 << (Dm1 & 0x1f); shift_zn(Dn0); }
+:ASL IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xc & op2m=0 & Dn0; IMM8 		{ Dn0 = Dn0 << (IMM8 & 0x1f); shift_zn(Dn0); }
+:ASL2 Dn0 			is entryfix=0 & op4=0x5 & op2m=1 & Dn0 						{ Dn0 = (Dn0 << 2); shift_zn(Dn0); }
 
 :ROR Dn0 		is entryfix=0 & op8=0xF2; op4=0x8 & op2m=1 & Dn0 				{ local c:1 = Dn0:1 & 1; local v:4 = (Dn0 >> 1) | (zext($(CF)) << 31); Dn0 = v; update_logic(v); $(CF) = c; }
 :ROL Dn0 		is entryfix=0 & op8=0xF2; op4=0x8 & op2m=0 & Dn0 				{ local c:1 = (Dn0 s< 0); local v:4 = (Dn0 << 1) | zext($(CF)); Dn0 = v; update_logic(v); $(CF) = c; }
