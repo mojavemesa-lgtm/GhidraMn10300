@@ -10,6 +10,8 @@ define register offset=0x20 size=4 [ MDR LIR LAR ];
 define register offset=0x30 size=4 [ PC SP  ]; 
 define register offset=0x50 size=2 [ PSW ]; # real size is 2, but am33 add epsw which is extended psw. is at same address or whatever so idk. could probably define it at same offset
 
+define register offset=0xA0 size=1 [ ZF NF CF VF ];
+
 define register offset=0x60 size=4 [ MDRQ MCRH MCRL MCVF ]; 
 
 define register offset=0x80 size=4 [ mult_addr ];
@@ -27,10 +29,18 @@ define context contextreg
 define pcodeop mn_todo;
 
 
-@define ZF  "PSW[0,1]"   # Zero flag
-@define NF  "PSW[1,1]"   # Negative flag
-@define CF  "PSW[2,1]"   # Carry flag 
-@define VF  "PSW[3,1]"   # Overflow flag
+# The condition flags live in their own 1-byte registers (ZF NF CF VF, offset 0xA0), NOT as bit-fields of PSW.
+# Bit-field flags make every flag write a read-modify-write of the 16-bit PSW, which chains each `add K,a0`
+# to the next conditional branch through PSW; the decompiler then thinks the call argument A0 is also
+# used by that branch and drops it (see sleigh_audit/H_argdrop.md). PSW is only composed/split at the few
+# instructions that access it explicitly.
+macro psw_get(v) { v = (PSW & 0xfff0) | zext(ZF) | (zext(NF) << 1) | (zext(CF) << 2) | (zext(VF) << 3); }
+macro psw_put(v) { PSW = v; ZF = (v & 1) != 0; NF = (v & 2) != 0; CF = (v & 4) != 0; VF = (v & 8) != 0; }
+
+@define ZF  "ZF"   # Zero flag
+@define NF  "NF"   # Negative flag
+@define CF  "CF"   # Carry flag 
+@define VF  "VF"   # Overflow flag
 @define IM0 "PSW[8,1]"   # Interrupt mask 0
 @define IM1 "PSW[9,1]"   # Interrupt mask 1
 @define IM2 "PSW[10,1]"  # Interrupt mask 2
@@ -321,9 +331,9 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOV Am1, Dn0    		is entryfix=0 & op8=0xF1; op4=0xD & Am1 & Dn0      		{ Dn0 = Am1; }
 :MOV Dm1, An0    		is entryfix=0 & op8=0xF1; op4=0xE & Dm1 & An0    		{ An0 = Dm1; }
 :MOV "MDR", Dn0 		is entryfix=0 & op8=0xF2; op4=0xE & op2m=0 & Dn0 		{ Dn0 = MDR; }
-:MOV "PSW", Dn0 		is entryfix=0 & op8=0xF2; op4=0xe & op2m=1 & Dn0  		{ Dn0 = zext(PSW); }
+:MOV "PSW", Dn0 		is entryfix=0 & op8=0xF2; op4=0xe & op2m=1 & Dn0  		{ local t:2 = 0; psw_get(t); Dn0 = zext(t); }
 :MOV Am, "SP"  			is entryfix=0 & op8=0xF2; op4=0xf & Am & op2n=0  		{ SP = Am; }
-:MOV Dm1, "PSW" 		is entryfix=0 & op8=0xF2; op4=0xf & Dm1 & op2n=3  		{ PSW = Dm1:2; }
+:MOV Dm1, "PSW" 		is entryfix=0 & op8=0xF2; op4=0xf & Dm1 & op2n=3  		{ local t:2 = Dm1:2; psw_put(t); }
 :MOV Dm1, "MDR" 		is entryfix=0 & op8=0xF2; op4=0xF & Dm1 & op2n=2  		{ MDR = Dm1; }
 :MOV (Dm, An), Du 		is entryfix=0 & op8=0xF3; op2i=0 & Du & Dm & An  		{ Du = *(Dm + An); }
 :MOV (Dm, An), Au 		is entryfix=0 & op8=0xF3; op2i=2 & Au & Dm & An  		{ Au = *(Dm + An); }
@@ -618,13 +628,13 @@ macro update_sub(a, b) {
 :AND IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=0 & Dn0; IMM8	{ Dn0 = zext(IMM8) & Dn0; update_logic(Dn0); }
 :AND IMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xE & op2m=0 & Dn0; IMM16	{ Dn0 = zext(IMM16) & Dn0; update_logic(Dn0); }
 :AND IMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xE & op2m=0 & Dn0; IMM32	{ Dn0 = IMM32 & Dn0; update_logic(Dn0); }
-:AND IMM16, "PSW" 	is entryfix=0 & op8=0xFA; op8=0xFC; IMM16				{ PSW = zext(IMM16) & PSW; }
+:AND IMM16, "PSW" 	is entryfix=0 & op8=0xFA; op8=0xFC; IMM16				{ local t:2 = 0; psw_get(t); t = IMM16 & t; psw_put(t); }
 
 :OR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=1 & Dm1 & Dn0 				{ Dn0 = Dm1 | Dn0; update_logic(Dn0); }
 :OR IMM8, Dn0 		is entryfix=0 & op8=0xF8; op4=0xE & op2m=1 & Dn0; IMM8	{ Dn0 = zext(IMM8) | Dn0; update_logic(Dn0); }
 :OR IMM16, Dn0 		is entryfix=0 & op8=0xFA; op4=0xE & op2m=1 & Dn0; IMM16	{ Dn0 = zext(IMM16) | Dn0; update_logic(Dn0); }
 :OR IMM32, Dn0 		is entryfix=0 & op8=0xFC; op4=0xE & op2m=1 & Dn0; IMM32	{ Dn0 = IMM32 | Dn0; update_logic(Dn0); }
-:OR IMM16, "PSW" 	is entryfix=0 & op8=0xFA; op8=0xFD; IMM16				{ PSW = zext(IMM16) | PSW; }
+:OR IMM16, "PSW" 	is entryfix=0 & op8=0xFA; op8=0xFD; IMM16				{ local t:2 = 0; psw_get(t); t = IMM16 | t; psw_put(t); }
 
 :XOR Dm1, Dn0 		is entryfix=0 & op8=0xF2; op4=2 & Dm1 & Dn0 				{ Dn0 = Dm1 ^ Dn0; update_logic(Dn0); }
 :XOR IMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xE & op2m=2 & Dn0; IMM16	{ Dn0 = zext(IMM16) ^ Dn0; update_logic(Dn0); }
@@ -747,7 +757,7 @@ macro shift_zn(v) {
 # JSR doesnt exist?
 
 # RTS??
-:RTI 			is entryfix=0 & op8=0xF0; op8=0xFD			{ PSW = *:2 SP; PC = *:4 (SP + 4); SP = SP + 8; return [PC]; }
+:RTI 			is entryfix=0 & op8=0xF0; op8=0xFD			{ local t:2 = *:2 SP; psw_put(t); PC = *:4 (SP + 4); SP = SP + 8; return [PC]; }
 :TRAP 			is entryfix=0 & op8=0xF0; op8=0xFE			{ *[ram]:4 SP = inst_next; PC = 0x40000010; goto [PC]; }
 
 :NOP 			is entryfix=0 & op8=0xCB			{ }

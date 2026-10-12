@@ -8,6 +8,10 @@
 
 	<register_data>
 		<register name="PSW" group="FLAGS" />
+		<register name="ZF" group="FLAGS" />
+		<register name="NF" group="FLAGS" />
+		<register name="CF" group="FLAGS" />
+		<register name="VF" group="FLAGS" />
 	</register_data>
   
   <default_memory_blocks>

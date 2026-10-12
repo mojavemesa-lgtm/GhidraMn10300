@@ -35,8 +35,8 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 :MOV An1, "SSP"		is entryfix=0 & op8=0xf0; op4=0x3 & An1 & op2n=1		{ SSP = An1; }
 :MOV An1, "MSP"		is entryfix=0 & op8=0xf0; op4=0x3 & An1 & op2n=2		{ MSP = An1; }
 
-:MOV "EPSW", Dn0	is entryfix=0 & op8=0xf2; op4=0xe & op2m=3 & Dn0 	{ Dn0 = EPSW; }
-:MOV Dm1, "EPSW"	is entryfix=0 & op8=0xf2; op4=0xf & Dm1 & op2n=1 	{ EPSW = Dm1; }
+:MOV "EPSW", Dn0	is entryfix=0 & op8=0xf2; op4=0xe & op2m=3 & Dn0 	{ local t:2 = 0; psw_get(t); Dn0 = (EPSW & 0xffff0000) | zext(t); }
+:MOV Dm1, "EPSW"	is entryfix=0 & op8=0xf2; op4=0xf & Dm1 & op2n=1 	{ EPSW = Dm1; local t:2 = Dm1:2; psw_put(t); }
 
 
 :MOV Am2, Rn0		is entryfix=0 & op8=0xf5; op2i=0 & Am2 & Rn0 		{ Rn0 = Am2; }
@@ -283,14 +283,14 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 :CMP SIMM32, Rn0 	is entryfix=0 & op8=0xfe; op8=0xd8; Rm2 & Rn0 & op4=op4l; SIMM32  	{ update_sub_flags(Rn0, SIMM32); }
 
 :AND Rm2, Rn0, Rd2	is entryfix=0 & op8=0xfb; op8=0x0d; Rm2 & Rn0; Rd2 & op4l=0  { Rd2 = Rm2 & Rn0; update_logic(Rd2); }
-:AND IMM32, "EPSW" 		is entryfix=0 & op8=0xfc; op8=0xfc; IMM32			  				{ EPSW = EPSW & IMM32; }
+:AND IMM32, "EPSW" 		is entryfix=0 & op8=0xfc; op8=0xfc; IMM32			  				{ local t:2 = 0; psw_get(t); local e:4 = ((EPSW & 0xffff0000) | zext(t)) & IMM32; EPSW = e; local u:2 = e:2; psw_put(u); }
 :AND Rm2, Rn0	is entryfix=0 & op8=0xf9; op8=0x09; Rm2 & Rn0  { Rn0 = Rn0 & Rm2; update_logic(Rn0); }
 :AND IMM8, Rn0	is entryfix=0 & op8=0xfb; op8=0x09; Rn2 & Rn0 & op4=op4l; IMM8  { Rn0 = Rn0 & zext(IMM8); update_logic(Rn0); }
 :AND IMM24, Rn0	is entryfix=0 & op8=0xfd; op8=0x09; Rn2 & Rn0 & op4=op4l; IMM24  { Rn0 = Rn0 & zext(IMM24); update_logic(Rn0); }
 :AND IMM32, Rn0	is entryfix=0 & op8=0xfe; op8=0x09; Rn2 & Rn0 & op4=op4l; IMM32  { Rn0 = Rn0 & IMM32; update_logic(Rn0); }
 
 :OR Rm2, Rn0, Rd2	is entryfix=0 & op8=0xfb; op8=0x1d; Rm2 & Rn0; Rd2 & op4l=0  { Rd2 = Rm2 | Rn0; update_logic(Rd2); }
-:OR IMM32, "EPSW" 		is entryfix=0 & op8=0xfc; op8=0xfd; IMM32			  				{ EPSW = EPSW | IMM32; }
+:OR IMM32, "EPSW" 		is entryfix=0 & op8=0xfc; op8=0xfd; IMM32			  				{ local t:2 = 0; psw_get(t); local e:4 = ((EPSW & 0xffff0000) | zext(t)) | IMM32; EPSW = e; local u:2 = e:2; psw_put(u); }
 :OR Rm2, Rn0	is entryfix=0 & op8=0xf9; op8=0x19; Rm2 & Rn0  { Rn0 = Rn0 | Rm2; update_logic(Rn0); }
 :OR IMM8, Rn0	is entryfix=0 & op8=0xfb; op8=0x19; Rn2 & Rn0 & op4=op4l; IMM8  { Rn0 = Rn0 | zext(IMM8); update_logic(Rn0); }
 :OR IMM24, Rn0	is entryfix=0 & op8=0xfd; op8=0x19; Rn2 & Rn0 & op4=op4l; IMM24  { Rn0 = Rn0 | zext(IMM24); update_logic(Rn0); }
