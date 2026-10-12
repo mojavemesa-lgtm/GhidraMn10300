@@ -424,9 +424,10 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOVM RegsBrace, ("SP") 	is entryfix=0 & op8=0xcf; RegsBrace  			{ mult_addr = SP; build RegsBrace; SP = mult_addr; }
 
 :EXT Dn0 		is entryfix=0 & op8=0xF2; op4=0xd & op2m=0 & Dn0 	{ MDR = Dn0 s>> 31; }
-:EXTB Dn0 		is entryfix=0 & op4=0x1 & op2m=0 & Dn0 	{ local sign:4 = Dn0 s>> 31; MDR = (Dn0 & (sign & 0xFFFFFF00)) & (sign | 0x000000FF); }
+# 2026-10-11: EXTB/EXTH were wrong (EXTB wrote MDR, EXTH zeroed every positive value and tested bit 31) -> plain sign-extends
+:EXTB Dn0 		is entryfix=0 & op4=0x1 & op2m=0 & Dn0 	{ Dn0 = sext(Dn0:1); }
 :EXTBU Dn0 		is entryfix=0 & op4=0x1 & op2m=1 & Dn0 	{ Dn0 = zext(Dn0:1); }
-:EXTH Dn0 		is entryfix=0 & op4=0x1 & op2m=2 & Dn0 	{ local sign:4 = Dn0 s>> 31; Dn0 = (Dn0 & (sign & 0xFFFF0000)) & (sign | 0x0000FFFF); }
+:EXTH Dn0 		is entryfix=0 & op4=0x1 & op2m=2 & Dn0 	{ Dn0 = sext(Dn0:2); }
 :EXTHU Dn0 		is entryfix=0 & op4=0x1 & op2m=3 & Dn0 	{ Dn0 = zext(Dn0:2); }
 
 :CLR Dn1 		is entryfix=0 & op4=0x0 & Dn1 & op2n=0 	{ Dn1 = 0; }
@@ -623,7 +624,8 @@ macro update_sub(a, b) {
 :LNE 	is entryfix=0 & op8=0xd9 				{ if ($(ZF) != 0)                     goto <end>; PC = LAR-4; goto [PC]; <end> } 
 :LGT 	is entryfix=0 & op8=0xd1 				{ if (($(ZF) | ($(NF) ^ $(VF))) != 0) goto <end>; PC = LAR-4; goto [PC]; <end> }
 :LGE 	is entryfix=0 & op8=0xd2 				{ if (($(NF) ^ $(VF)) != 0)           goto <end>; PC = LAR-4; goto [PC]; <end> }
-:LLE 	is entryfix=0 & op8=0xd3 				{ if ($(ZF) | ($(NF) ^ $(VF)) != 1)   goto <end>; PC = LAR-4; goto [PC]; <end> }
+# 2026-10-11: LLE condition had != binding tighter than | (exited on the wrong flags)
+:LLE 	is entryfix=0 & op8=0xd3 				{ if (($(ZF) | ($(NF) ^ $(VF))) != 1) goto <end>; PC = LAR-4; goto [PC]; <end> }
 :LLT 	is entryfix=0 & op8=0xd0 				{ if (($(NF) ^ $(VF)) != 1)           goto <end>; PC = LAR-4; goto [PC]; <end> } 
 :LHI 	is entryfix=0 & op8=0xd5 				{ if (($(CF) | $(ZF)) != 0)           goto <end>; PC = LAR-4; goto [PC]; <end> } 
 :LCC 	is entryfix=0 & op8=0xd6 				{ if ($(CF) != 0)                     goto <end>; PC = LAR-4; goto [PC]; <end> } 
