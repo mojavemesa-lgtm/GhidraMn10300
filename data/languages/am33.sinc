@@ -193,17 +193,16 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 :SUBC SIMM32, Rn0	is entryfix=0 & op8=0xfe; op8=0xa8; Rn2 & Rn0 & op4=op4l; SIMM32  { update_subc_am33(Rn0, SIMM32); }
 
 
-:MUL Rm2, Rn0, Rd2, Rd0 is  entryfix=0 & op8=0xfb; op8=0xad; Rm2 & Rn0; Rd2 & Rd0  			
-{ 
-	local r:8=sext(Rm2)*sext(Rn0);
-	
-	Rd0=r(4);
-	Rd2=r:4;
-	
-	$(ZF)= (Rd0 == 0) && (Rd2 == 0);
-	$(NF) = Rd0 s< 0;
-	$(CF) = 0;
-	$(VF) = 0;
+:MUL Rm2, Rn0, Rd2, Rd0 is  entryfix=0 & op8=0xfb; op8=0xad; Rm2 & Rn0; Rd2 & Rd0
+{
+	# sim: first-listed destination (high nibble) gets the HIGH word, the second the LOW word; only Z (64-bit result==0) and N (high word) change, C and V untouched.
+	local r:8 = sext(Rm2) * sext(Rn0);
+	local hi:4 = r(4);
+	local lo:4 = r:4;
+	Rd2 = hi;
+	Rd0 = lo;
+	$(ZF) = (hi == 0) && (lo == 0);
+	$(NF) = hi s< 0;
 }
 :MUL Rm2, Rn0	is entryfix=0 & op8=0xf9; op8=0xa9; Rm2 & Rn0  { local r:8=sext(Rn0)*sext(Rm2); Rn0=r:4; MDR=r(4); update_logic(Rn0); }
 :MUL SIMM8, Rn0	is entryfix=0 & op8=0xfb; op8=0xa9; Rn2 & Rn0 & op4=op4l; SIMM8  { local r:8=sext(Rn0)*sext(SIMM8); Rn0=r:4; MDR=r(4); update_logic(Rn0); }
@@ -211,16 +210,15 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 :MUL SIMM32, Rn0	is entryfix=0 & op8=0xfe; op8=0xa9; Rn2 & Rn0 & op4=op4l; SIMM32  { local r:8=sext(Rn0)*sext(SIMM32); Rn0=r:4; MDR=r(4); update_logic(Rn0); }
 
 :MULU Rm2, Rn0, Rd2, Rd0 is  entryfix=0 & op8=0xfb; op8=0xbd; Rm2 & Rn0; Rd2 & Rd0
-{ 
-	local r:8=zext(Rm2)*zext(Rn0);
-	
-	Rd0=r(4);
-	Rd2=r:4;
-	
-	$(ZF)= (Rd0 == 0) && (Rd2 == 0);
-	$(NF) = Rd0 s< 0;
-	$(CF) = 0;
-	$(VF) = 0;
+{
+	# sim: first-listed destination (high nibble) gets the HIGH word, the second the LOW word; only Z (64-bit result==0) and N (high word) change, C and V untouched.
+	local r:8 = zext(Rm2) * zext(Rn0);
+	local hi:4 = r(4);
+	local lo:4 = r:4;
+	Rd2 = hi;
+	Rd0 = lo;
+	$(ZF) = (hi == 0) && (lo == 0);
+	$(NF) = hi s< 0;
 }
 
 :MULU Rm2, Rn0	is entryfix=0 & op8=0xf9; op8=0xb9; Rm2 & Rn0  { local r:8=zext(Rn0)*zext(Rm2); Rn0=r:4; MDR=r(4); update_logic(Rn0); }
@@ -285,7 +283,7 @@ attach variables [ FUn0 FUn2  FUm0 FUm2  FUd0 FUd2 ] [ fs16 fs17 fs18 fs19 fs20 
 :CMP SIMM32, Rn0 	is entryfix=0 & op8=0xfe; op8=0xd8; Rm2 & Rn0 & op4=op4l; SIMM32  	{ update_sub_flags(Rn0, SIMM32); }
 
 :AND Rm2, Rn0, Rd2	is entryfix=0 & op8=0xfb; op8=0x0d; Rm2 & Rn0; Rd2 & op4l=0  { Rd2 = Rm2 & Rn0; update_logic(Rd2); }
-:AND IMM32, "EPSW" 		is entryfix=0 & op8=0xfc; op8=0xfc; IMM32			  				{ EPSW = EPSW | IMM32; }
+:AND IMM32, "EPSW" 		is entryfix=0 & op8=0xfc; op8=0xfc; IMM32			  				{ EPSW = EPSW & IMM32; }
 :AND Rm2, Rn0	is entryfix=0 & op8=0xf9; op8=0x09; Rm2 & Rn0  { Rn0 = Rn0 & Rm2; update_logic(Rn0); }
 :AND IMM8, Rn0	is entryfix=0 & op8=0xfb; op8=0x09; Rn2 & Rn0 & op4=op4l; IMM8  { Rn0 = Rn0 & zext(IMM8); update_logic(Rn0); }
 :AND IMM24, Rn0	is entryfix=0 & op8=0xfd; op8=0x09; Rn2 & Rn0 & op4=op4l; IMM24  { Rn0 = Rn0 & zext(IMM24); update_logic(Rn0); }
