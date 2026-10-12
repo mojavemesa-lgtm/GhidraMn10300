@@ -364,10 +364,10 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOV Am, (D32, "SP") 	is entryfix=0 & op8=0xFC; op4=9 & Am & op2n=0; D32 		{ *(SP + zext(D32)) = Am; }
 :MOV Dm, (D32, "SP") 	is entryfix=0 & op8=0xFC; op4=9 & Dm & op2n=1; D32 		{ *(SP + zext(D32)) = Dm; }
 
-:MOV IMM16, An 		is entryfix=0 & op4=0x2 & op2m=1 & An; IMM16 			{ An = sext(IMM16); }
+:MOV IMM16, An 		is entryfix=0 & op4=0x2 & op2m=1 & An; IMM16 			{ An = zext(IMM16); }
 :MOV IMM16, Dn 		is entryfix=0 & op4=0x2 & op2m=3 & Dn; IMM16 			{ Dn = sext(IMM16); }
 :MOV IMM8, Dn0 		is entryfix=0 & op4=0x8 & Dn0 & Dn1 & reg0=reg1; IMM8 	{ Dn0 = sext(IMM8); }
-:MOV IMM8, An0 		is entryfix=0 & op4=0x9 & An0 & An1 & reg0=reg1; IMM8 	{ An0 = sext(IMM8); }
+:MOV IMM8, An0 		is entryfix=0 & op4=0x9 & An0 & An1 & reg0=reg1; IMM8 	{ An0 = zext(IMM8); }
 :MOV IMM32, Dn 		is entryfix=0 & op8=0xFC; op4=0xc & op2m=3 & Dn; IMM32 	{ Dn = sext(IMM32); }
 :MOV IMM32, An 		is entryfix=0 & op8=0xFC; op4=0xd & op2m=3 & An; IMM32 	{ An = sext(IMM32); }
 
@@ -377,9 +377,9 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOVBU (An), Dm 		is entryfix=0 & op8=0xf0; op4=0x4 & Dm & An  			{ Dm = zext(*:1 An); }
 :MOVBU (Dm, An), Du 	is entryfix=0 & op8=0xf4; op2i=0 & Du & Dm & An  		{ Du = zext(*:1 (Dm + An)); }
 :MOVBU (D8 , An), Dm 	is entryfix=0 & op8=0xf8; op4=0x4 & Dm & An; D8  		{ Dm = zext(*:1 (An + sext(D8))); }
-:MOVBU (D8 , "SP"), Dn 	is entryfix=0 & op8=0xf8; op4=0xb & op2m=2 & Dn; D8  	{ Dn = zext(*:1 (SP + sext(D8))); }
+:MOVBU (D8 , "SP"), Dn 	is entryfix=0 & op8=0xf8; op4=0xb & op2m=2 & Dn; D8  	{ Dn = zext(*:1 (SP + zext(D8))); }
 :MOVBU (D16, An), Dm 	is entryfix=0 & op8=0xfa; op4=0x4 & Dm & An; D16  		{ Dm = zext(*:1 (An + sext(D16))); }
-:MOVBU (D16, "SP"), Dn 	is entryfix=0 & op8=0xfa; op4=0xb & op2m=2 & Dn; D16  	{ Dn = zext(*:1 (SP + sext(D16))); }
+:MOVBU (D16, "SP"), Dn 	is entryfix=0 & op8=0xfa; op4=0xb & op2m=2 & Dn; D16  	{ Dn = zext(*:1 (SP + zext(D16))); }
 :MOVBU (D32, An), Dm 	is entryfix=0 & op8=0xfc; op4=0x4 & Dm & An; D32  		{ Dm = zext(*:1 (An + D32)); }
 :MOVBU (IMM32), Dn 		is entryfix=0 & op8=0xfc; op4=0xa & op2m=2 & Dn; IMM32 	{ Dn = zext(*:1 IMM32); }
 :MOVBU (D32, "SP"), Dn 	is entryfix=0 & op8=0xfc; op4=0xb & op2m=2 & Dn; D32  	{ Dn = zext(*:1 (SP + D32)); }
@@ -402,8 +402,8 @@ ABS32: addr is d32 	{ export *[ram]:4 addr; }
 :MOVHU (D8 , An), Dm 	is entryfix=0 & op8=0xf8; op4=0x6 & Dm & An; D8  		{ Dm = zext(*:2 (An + sext(D8))); }
 :MOVHU (D16, An), Dm 	is entryfix=0 & op8=0xfa; op4=0x6 & Dm & An; D16  		{ Dm = zext(*:2 (An + sext(D16))); }
 :MOVHU (D32, An), Dm 	is entryfix=0 & op8=0xfc; op4=0x6 & Dm & An; D32  		{ Dm = zext(*:2 (An + D32)); }
-:MOVHU (D8 , "SP"), Dn 	is entryfix=0 & op8=0xf8; op4=0xb & op2m=3 & Dn; D8  	{ Dn = zext(*:2 (SP + sext(D8))); }
-:MOVHU (D16, "SP"), Dn 	is entryfix=0 & op8=0xfa; op4=0xb & op2m=3 & Dn; D16  	{ Dn = zext(*:2 (SP + sext(D16))); }
+:MOVHU (D8 , "SP"), Dn 	is entryfix=0 & op8=0xf8; op4=0xb & op2m=3 & Dn; D8  	{ Dn = zext(*:2 (SP + zext(D8))); }
+:MOVHU (D16, "SP"), Dn 	is entryfix=0 & op8=0xfa; op4=0xb & op2m=3 & Dn; D16  	{ Dn = zext(*:2 (SP + zext(D16))); }
 :MOVHU (D32, "SP"), Dn 	is entryfix=0 & op8=0xfc; op4=0xb & op2m=3 & Dn; D32  	{ Dn = zext(*:2 (SP + D32)); }
 :MOVHU (Dm, An), Du 	is entryfix=0 & op8=0xf4; op2i=2 & Du & Dm & An  		{ Du = zext(*:2 (Dm + An)); }
 :MOVHU (IMM16), Dn 		is entryfix=0 & op4=0x3 & op2m=2 & Dn; IMM16 			{ local addr:4 = zext(IMM16); Dn = zext(*:2 addr); }
@@ -587,8 +587,8 @@ macro update_sub(a, b) {
 :CMP SIMM8, Dn0 	is entryfix=0 & op4=0xa & Dn1 & Dn0 & reg0=reg1; SIMM8 		{ update_sub_flags(Dn0, sext(SIMM8)); }
 :CMP SIMM16, Dn0 	is entryfix=0 & op8=0xFA; op4=0xc & op2m=2 & Dn0; SIMM16 	{ update_sub_flags(Dn0, sext(SIMM16)); }
 :CMP SIMM32, Dn0 	is entryfix=0 & op8=0xFC; op4=0xc & op2m=2 & Dn0; SIMM32 	{ update_sub_flags(Dn0, SIMM32); }
-:CMP SIMM8, An0 	is entryfix=0 & op4=0xb & An1 & An0 & reg0=reg1; SIMM8 		{ update_sub_flags(An0, sext(SIMM8)); }
-:CMP SIMM16, An0 	is entryfix=0 & op8=0xFA; op4=0xd & op2m=2 & An0; SIMM16 	{ update_sub_flags(An0, sext(SIMM16)); }
+:CMP IMM8, An0 	is entryfix=0 & op4=0xb & An1 & An0 & reg0=reg1; IMM8 		{ update_sub_flags(An0, zext(IMM8)); }
+:CMP IMM16, An0 	is entryfix=0 & op8=0xFA; op4=0xd & op2m=2 & An0; IMM16 	{ update_sub_flags(An0, zext(IMM16)); }
 :CMP SIMM32, An0 	is entryfix=0 & op8=0xFC; op4=0xd & op2m=2 & An0; SIMM32 	{ update_sub_flags(An0, SIMM32); }
 
 # Logical operation instructions
